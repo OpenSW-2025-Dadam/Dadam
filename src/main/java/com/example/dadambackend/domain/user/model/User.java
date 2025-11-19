@@ -17,9 +17,15 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    // TODO: 실제 구현 시 Password, Role 등 추가
+    @Column(nullable = false)
+    private String password;
 
-    public User(String email) {
+    @Column(nullable = false)
+    private String name;
+
+    public User(String email, String password, String name) {
         this.email = email;
+        this.password = password;
+        this.name = name;
     }
 }
