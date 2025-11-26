@@ -3,11 +3,15 @@ SET FOREIGN_KEY_CHECKS = 0;
 DELETE FROM answer;
 DELETE FROM question;
 DELETE FROM app_user;
+DELETE FROM balance_game_selection;
+DELETE FROM balance_game;
 
 -- Auto Increment 카운터 재설정 (ID 충돌 방지)
 ALTER TABLE app_user AUTO_INCREMENT = 1;
 ALTER TABLE question AUTO_INCREMENT = 1;
 ALTER TABLE answer AUTO_INCREMENT = 1;
+ALTER TABLE balance_game AUTO_INCREMENT = 1;
+ALTER TABLE balance_game_selection AUTO_INCREMENT = 1;
 
 -- 2. 테스트 사용자 삽입
 INSERT INTO app_user (email, name, password) VALUES
@@ -38,5 +42,18 @@ INSERT INTO answer (question_id, user_id, content, created_at) VALUES
 (3, 1, '힘들 때 말없이 어깨를 토닥여준 순간이 가장 고마웠어요.', NOW()),
 (3, 2, '생일날 깜짝 이벤트 해줬을 때요! 평생 잊지 못할 거예요.', NOW() + INTERVAL 1 MINUTE),
 (3, 3, '제가 잘못했을 때 혼내지 않고 차분히 이야기해 줬던 그날이 기억에 남아요.', NOW() + INTERVAL 2 MINUTE);
+
+INSERT INTO balance_game (question_content, option_a, option_b, created_at) VALUES
+('Q1: 모든 구성원 참여 완료 - 밸런스 게임 Q1', 'A: 민트초코', 'B: 반민트초코', NOW()),
+('Q2: 나만 참여 안 함 - 밸런스 게임 Q2', 'A: 평생 한 가지 음식만 먹기', 'B: 평생 한 가지 색깔만 보기', NOW() + INTERVAL 1 HOUR);
+
+INSERT INTO balance_game_selection (balance_game_id, user_id, selected_option, created_at) VALUES
+(1, 1, 'A', NOW()),       -- 나(User 1) 참여
+(1, 2, 'B', NOW() + INTERVAL 1 MINUTE),
+(1, 3, 'A', NOW() + INTERVAL 2 MINUTE);
+
+INSERT INTO balance_game_selection (balance_game_id, user_id, selected_option, created_at) VALUES
+(2, 2, 'B', NOW() + INTERVAL 3 MINUTE),
+(2, 3, 'A', NOW() + INTERVAL 4 MINUTE);
 
 SET FOREIGN_KEY_CHECKS = 1;
