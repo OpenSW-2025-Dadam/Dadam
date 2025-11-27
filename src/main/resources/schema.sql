@@ -1,4 +1,5 @@
 -- ⭐ 1. 모든 테이블 삭제 (외래 키 역순)
+DROP TABLE IF EXISTS schedule;
 DROP TABLE IF EXISTS comment;
 DROP TABLE IF EXISTS quiz_selection;
 DROP TABLE IF EXISTS balance_game_selection;
@@ -108,3 +109,11 @@ CREATE TABLE `quiz_selection` (
   CONSTRAINT `FK_selection_user_quiz` FOREIGN KEY (`user_id`) REFERENCES `app_user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE `schedule` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `appointment_name` varchar(255) NOT NULL,
+  `appointment_date` date NOT NULL,
+  `icon_type` int NOT NULL,
+  `created_at` datetime(6) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

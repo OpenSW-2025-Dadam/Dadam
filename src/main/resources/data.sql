@@ -8,6 +8,7 @@ DELETE FROM balance_game_selection;
 DELETE FROM balance_game;
 DELETE FROM quiz_selection;
 DELETE FROM quiz;
+DELETE FROM schedule;
 
 -- Auto Increment 카운터 재설정 (ID 충돌 방지)
 ALTER TABLE app_user AUTO_INCREMENT = 1;
@@ -18,6 +19,7 @@ ALTER TABLE balance_game AUTO_INCREMENT = 1;
 ALTER TABLE balance_game_selection AUTO_INCREMENT = 1;
 ALTER TABLE quiz AUTO_INCREMENT = 1;
 ALTER TABLE quiz_selection AUTO_INCREMENT = 1;
+ALTER TABLE schedule AUTO_INCREMENT = 1;
 
 -- 2. 테스트 사용자 삽입
 INSERT INTO app_user (email, name, password) VALUES
@@ -90,5 +92,19 @@ VALUES
 (2, 1, 'A', 0, NOW()),
 (2, 2, 'D', 0, NOW()),  -- User 2: 오답
 (2, 3, 'C', 1, NOW());  -- User 3: 정답
+
+-- 3. INSERT SCHEDULE 데이터 추가
+INSERT INTO schedule (id, appointment_name, appointment_date, icon_type, created_at) VALUES
+-- 다가오는 일정 (30일 이내)
+(1, '가족 외식 모임', DATE_ADD(CURDATE(), INTERVAL 7 DAY), 1, NOW()),
+(2, '병원 예약', DATE_ADD(CURDATE(), INTERVAL 25 DAY), 3, NOW()),
+(3, '자녀 학예회', DATE_ADD(CURDATE(), INTERVAL 30 DAY), 6, NOW()),
+
+-- 다가오지 않는 일정 (30일 초과)
+(4, '여름 휴가 계획', DATE_ADD(CURDATE(), INTERVAL 60 DAY), 2, NOW()),
+(5, '내년 가족사진 촬영', DATE_ADD(CURDATE(), INTERVAL 150 DAY), 5, NOW()),
+
+-- 이미 지난 일정 (조회되지 않아야 함)
+(6, '지난달 모임', DATE_SUB(CURDATE(), INTERVAL 10 DAY), 4, NOW());
 
 SET FOREIGN_KEY_CHECKS = 1;
