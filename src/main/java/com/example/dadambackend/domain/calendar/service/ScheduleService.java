@@ -3,6 +3,7 @@ package com.example.dadambackend.domain.calendar.service;
 
 import com.example.dadambackend.domain.calendar.dto.ScheduleRequest;
 import com.example.dadambackend.domain.calendar.dto.ScheduleResponse;
+import com.example.dadambackend.domain.calendar.dto.ScheduleUpdateResponse;
 import com.example.dadambackend.domain.calendar.model.Schedule;
 import com.example.dadambackend.domain.calendar.repository.ScheduleRepository;
 import com.example.dadambackend.global.exception.BusinessException;
@@ -21,30 +22,57 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ScheduleService {
 
-    // 다가오는 일정 기준 (30일)
     public static final int UPCOMING_DAYS = 30;
 
     private final ScheduleRepository scheduleRepository;
 
     /**
-     * 일정 등록 (약속 이름, 날짜, 아이콘)
+     * 일정 등록
      */
     @Transactional
     public ScheduleResponse createSchedule(ScheduleRequest request) {
-        // 엔티티 생성 시 아이콘 유효성 검사는 Schedule 엔티티에서 처리됩니다.
+        // DTO에서 받은 Integer 타입을 int로 변환 (null이 아닌 것이 보장되어야 함 - 등록 시에는 모든 필드가 필수)
         Schedule schedule = new Schedule(
                 request.getAppointmentName(),
                 request.getAppointmentDate(),
-                request.getIconType()
+                request.getIconType() // 등록 시에는 null이면 안 되지만, 편의를 위해 Service에서 Integer 처리하지 않음
         );
         Schedule savedSchedule = scheduleRepository.save(schedule);
-
-        // 등록 직후에는 다가오는 일정으로 간주하지 않음 (API 용도를 위해)
         return ScheduleResponse.from(savedSchedule, isUpcoming(savedSchedule.getAppointmentDate()));
     }
 
     /**
-     * 다가오는 일정 목록 조회 (오늘부터 30일 이내)
+     * 일정 상세 조회 (수정 팝업에 기존 데이터 채우기 위함)
+     */
+    public ScheduleUpdateResponse getScheduleForUpdate(Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_FOUND, "수정하려는 일정을 찾을 수 없습니다."));
+
+        return ScheduleUpdateResponse.from(schedule);
+    }
+
+    /**
+     * 일정 수정 로직 (핵심 수정)
+     */
+    @Transactional
+    public ScheduleResponse updateSchedule(Long scheduleId, ScheduleRequest request) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_FOUND, "수정하려는 일정을 찾을 수 없습니다."));
+
+        // 기존 값 유지 로직
+        // request의 값이 null이면 기존 값을 사용하고, 아니면 request 값을 사용
+        String newName = request.getAppointmentName() != null ? request.getAppointmentName() : schedule.getAppointmentName();
+        LocalDate newDate = request.getAppointmentDate() != null ? request.getAppointmentDate() : schedule.getAppointmentDate();
+        Integer newIconType = request.getIconType() != null ? request.getIconType() : schedule.getIconType(); // ⭐ Integer로 받도록 처리
+
+        // Schedule 엔티티의 update 메서드를 호출하여 수정
+        schedule.update(newName, newDate, newIconType);
+
+        return ScheduleResponse.from(schedule, isUpcoming(schedule.getAppointmentDate()));
+    }
+
+    /**
+     * 다가오는 일정 목록 조회
      */
     public List<ScheduleResponse> getUpcomingSchedules() {
         LocalDate today = LocalDate.now();
@@ -53,7 +81,6 @@ public class ScheduleService {
         List<Schedule> schedules = scheduleRepository.findByAppointmentDateBetweenOrderByAppointmentDateAsc(today, maxDate);
 
         return schedules.stream()
-                // 다가오는 일정(isUpcoming)은 항상 true로 설정
                 .map(schedule -> ScheduleResponse.from(schedule, true))
                 .collect(Collectors.toList());
     }
@@ -63,19 +90,12 @@ public class ScheduleService {
      */
     @Transactional
     public void cancelSchedule(Long scheduleId) {
-        // 1. 일정 존재 여부 확인
         if (!scheduleRepository.existsById(scheduleId)) {
-            // GAME_NOT_FOUND 재사용 (일정=게임/이벤트)
             throw new BusinessException(ErrorCode.GAME_NOT_FOUND, "취소하려는 일정을 찾을 수 없습니다.");
         }
-
-        // 2. 일정 삭제
         scheduleRepository.deleteById(scheduleId);
     }
 
-    /**
-     * Helper: 다가오는 일정 여부 판단 (30일 이하)
-     */
     private boolean isUpcoming(LocalDate date) {
         long daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), date);
         return daysUntil >= 0 && daysUntil <= UPCOMING_DAYS;
