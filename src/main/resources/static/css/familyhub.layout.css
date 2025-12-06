@@ -2,13 +2,14 @@
    familyhub.layout.css
    - Header / Main Layout / Sidebar
    - 전체 페이지 레이아웃 담당
+   (따뜻한 베이지 + 말차톤 레이아웃)
 ========================================= */
 
 /* ---------- App Wrapper ---------- */
 .app {
     max-width: var(--fh-layout-max-width);
     margin: 0 auto;
-    padding: 0 var(--fh-layout-padding-x);
+    padding: 16px var(--fh-layout-padding-x) 32px;
 }
 
 /* ---------- Header ---------- */
@@ -18,16 +19,17 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 4px;
+    padding: 10px 10px;
     margin-bottom: 24px;
 
     position: sticky;
     top: 0;
     z-index: 50;
 
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(14px);
-    border-bottom: 1px solid var(--fh-color-border-subtle);
+    background: rgba(250, 244, 234, 0.94); /* 따뜻한 베이지 투명 배경 */
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(63, 52, 37, 0.08);
+    box-shadow: 0 8px 20px rgba(63, 52, 37, 0.05);
 }
 
 /* Left section */
@@ -41,15 +43,28 @@
 .logo-chip {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 12px;
-    border-radius: var(--fh-radius-md);
-    background: var(--fh-color-primary-soft);
-    transition: 0.25s ease;
+    gap: 12px;
+    padding: 6px 14px;
+    border-radius: var(--fh-radius-lg);
+    background: linear-gradient(
+            135deg,
+            rgba(242, 246, 236, 0.9),
+            rgba(224, 237, 212, 0.9)
+    );
+    border: 1px solid rgba(91, 140, 90, 0.18);
+    box-shadow: 0 6px 18px rgba(63, 52, 37, 0.08);
+    transition: transform 0.18s ease, box-shadow 0.18s ease,
+    background 0.18s ease;
 }
 
 .logo-chip:hover {
-    background: var(--fh-color-primary-soft-strong);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(63, 52, 37, 0.12);
+    background: linear-gradient(
+            135deg,
+            rgba(224, 237, 212, 0.95),
+            rgba(242, 246, 236, 0.95)
+    );
 }
 
 .logo-mark {
@@ -58,13 +73,14 @@
 
 .logo-title {
     font-weight: 700;
-    font-size: 17px;
+    font-size: 18px;
+    color: var(--fh-color-text-main);
 }
 
 .logo-subtitle {
     font-size: 12px;
-    color: var(--fh-color-text-soft);
-    margin-top: -3px;
+    color: var(--fh-color-text-softer);
+    margin-top: -2px;
 }
 
 /* Navigation */
@@ -75,23 +91,26 @@
 }
 
 .nav-pill {
-    padding: 7px 16px;
+    padding: 8px 18px;
     border-radius: var(--fh-radius-pill);
     font-weight: 500;
-    font-size: 14px;
+    font-size: 15px;
     background: transparent;
     color: var(--fh-color-text-soft);
-    transition: all 0.22s ease;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
 }
 
 .nav-pill:hover {
     background: var(--fh-color-primary-soft);
     color: var(--fh-color-primary);
+    border-color: rgba(91, 140, 90, 0.2);
 }
 
 .nav-pill.is-active {
     background: var(--fh-color-primary);
-    color: white;
+    color: #fffdf7;
+    border-color: rgba(63, 52, 37, 0.1);
 }
 
 /* Right section */
@@ -103,37 +122,44 @@
 
 .header-icon-btn {
     background: transparent;
-    padding: 6px;
-    border-radius: var(--fh-radius-sm);
+    padding: 7px;
+    border-radius: 12px;
     position: relative;
     font-size: 20px;
-    transition: 0.15s ease;
+    transition: background 0.18s ease, transform 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .header-icon-btn:hover {
-    background: var(--fh-color-primary-soft);
+    background: rgba(242, 246, 236, 0.9);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(63, 52, 37, 0.08);
 }
 
 .avatar-chip {
-    padding: 6px 10px;
+    padding: 6px 12px;
     display: flex;
     align-items: center;
     gap: 8px;
     border-radius: var(--fh-radius-pill);
-    background: var(--fh-color-bg-elevated);
-    border: 1px solid var(--fh-color-border-subtle);
-    transition: 0.2s ease;
+    background: rgba(255, 253, 247, 0.95);
+    border: 1px solid rgba(63, 52, 37, 0.08);
+    box-shadow: 0 3px 8px rgba(63, 52, 37, 0.06);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease,
+    transform 0.18s ease;
 }
 
 .avatar-chip:hover {
-    border-color: var(--fh-color-primary);
+    border-color: rgba(91, 140, 90, 0.65);
+    box-shadow: 0 6px 16px rgba(63, 52, 37, 0.1);
+    transform: translateY(-1px);
 }
 
 /* ---------- Main Layout ---------- */
 
 .main-layout {
     display: grid;
-    grid-template-columns: 1.6fr 1fr;
+    grid-template-columns: 1.65fr 1fr;
     gap: 24px;
     margin-bottom: 48px;
 }
@@ -148,7 +174,7 @@
 /* Sidebar */
 .sidebar {
     position: sticky;
-    top: calc(var(--fh-layout-header-height) + 12px);
+    top: calc(var(--fh-layout-header-height) + 16px);
     height: max-content;
     display: flex;
     flex-direction: column;
@@ -163,6 +189,7 @@
     padding: 16px;
     border-radius: var(--fh-radius-lg);
     border: 1px solid var(--fh-color-border-subtle);
+    box-shadow: 0 8px 20px rgba(63, 52, 37, 0.04);
 }
 
 .calendar-header {
@@ -175,6 +202,7 @@
 .calendar-title {
     font-weight: 600;
     font-size: 15px;
+    color: var(--fh-color-text-main);
 }
 
 .calendar-grid {
@@ -191,7 +219,7 @@
     margin-top: 12px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .activity-item {
@@ -200,8 +228,13 @@
     gap: 10px;
     padding: 10px 12px;
     border-radius: var(--fh-radius-md);
-    background: var(--fh-color-bg-elevated);
+    background: linear-gradient(
+            135deg,
+            rgba(255, 253, 247, 0.98),
+            rgba(250, 244, 234, 0.95)
+    );
     border: 1px solid var(--fh-color-border-subtle);
+    box-shadow: 0 6px 16px rgba(63, 52, 37, 0.05);
 }
 
 .activity-icon {
@@ -242,11 +275,11 @@
     }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .header {
         flex-wrap: wrap;
         height: auto;
-        padding: 12px 8px 10px;
+        padding: 10px 10px 12px;
         gap: 10px;
     }
 
@@ -254,7 +287,30 @@
         flex-wrap: wrap;
     }
 
+    .app {
+        padding-inline: 16px;
+    }
+
     .main-layout {
         gap: 20px;
+    }
+}
+
+@media (max-width: 640px) {
+    .logo-chip {
+        padding: 6px 10px;
+    }
+
+    .logo-title {
+        font-size: 16px;
+    }
+
+    .logo-subtitle {
+        display: none;
+    }
+
+    .nav-pill {
+        padding: 6px 12px;
+        font-size: 14px;
     }
 }
