@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="card card-answers"
+         aria-label="가족 답변"
+         th:fragment="answers-card">
+
+    <header class="card-header">
+        <div class="card-header-left">
+            <h2 class="card-title">우리 가족 답변</h2>
+            <p class="card-subtitle">
+                클릭하면 각자 답변에 댓글을 달 수 있어요.
+            </p>
+        </div>
+        <div class="card-header-right">
+            <span class="pill pill-soft" id="answer-progress-pill">
+                0 / 0명 참여 중
+            </span>
+        </div>
+    </header>
+
+    <!-- ✅ 실제 데이터는 dadam.answers.js가 렌더링 -->
+    <ul class="answer-list" id="answer-list"></ul>
+</section>
+</body>
+</html>

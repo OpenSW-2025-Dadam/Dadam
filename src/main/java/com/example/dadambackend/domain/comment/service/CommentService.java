@@ -28,13 +28,14 @@ public class CommentService {
     private final AnswerRepository answerRepository; // 답변 엔티티 조회를 위해 필요
     private final UserRepository userRepository;
 
+    // TODO: 실제 서비스에서는 SecurityContext에서 현재 로그인 유저 ID를 가져와야 함
     private final Long TEMP_USER_ID = 1L; // 현재 사용자 ID (임시)
 
     /**
      * 특정 답변에 달린 모든 댓글 조회
      */
     public List<CommentResponse> getCommentsByAnswer(Long answerId) {
-        // Answer 존재 여부 확인 (필수 아님, 없으면 댓글도 없을 것이므로)
+        // Answer 존재 여부 확인
         if (!answerRepository.existsById(answerId)) {
             throw new BusinessException(ErrorCode.GAME_NOT_FOUND, "해당 답변을 찾을 수 없습니다.");
         }
@@ -55,7 +56,10 @@ public class CommentService {
         // 1. 1인당 댓글 개수 제한 검사
         long userCommentCount = commentRepository.countByUserId(TEMP_USER_ID);
         if (userCommentCount >= MAX_COMMENTS_PER_USER) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "1인당 최대 " + MAX_COMMENTS_PER_USER + "개의 댓글만 작성할 수 있습니다.");
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "1인당 최대 " + MAX_COMMENTS_PER_USER + "개의 댓글만 작성할 수 있습니다."
+            );
         }
 
         // 2. 답변, 사용자 객체 조회
@@ -70,5 +74,70 @@ public class CommentService {
 
         // Comment 생성자에서 글자 수 제한 유효성 검사를 수행합니다.
         commentRepository.save(comment);
+    }
+
+    /**
+     * 댓글 수정 로직
+     */
+    @Transactional
+    public void updateComment(Long answerId, Long commentId, CommentRequest request) {
+        // 1. 댓글 조회
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.INVALID_REQUEST,
+                        "해당 댓글을 찾을 수 없습니다."
+                ));
+
+        // 2. 해당 답변에 속한 댓글인지 검증
+        if (!comment.getAnswer().getId().equals(answerId)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "해당 답변에 속한 댓글이 아닙니다."
+            );
+        }
+
+        // 3. 작성자 검증 (본인 댓글만 수정 가능)
+        if (!comment.getUser().getId().equals(TEMP_USER_ID)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "본인이 작성한 댓글만 수정할 수 있습니다."
+            );
+        }
+
+        // 4. 내용 수정
+        comment.updateContent(request.getContent());
+        // 변경 감지는 @Transactional + 영속 엔티티 수정으로 자동 반영
+    }
+
+    /**
+     * 댓글 삭제 로직
+     */
+    @Transactional
+    public void deleteComment(Long answerId, Long commentId) {
+        // 1. 댓글 조회
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.INVALID_REQUEST,
+                        "해당 댓글을 찾을 수 없습니다."
+                ));
+
+        // 2. 해당 답변에 속한 댓글인지 검증
+        if (!comment.getAnswer().getId().equals(answerId)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "해당 답변에 속한 댓글이 아닙니다."
+            );
+        }
+
+        // 3. 작성자 검증 (본인 댓글만 삭제 가능)
+        if (!comment.getUser().getId().equals(TEMP_USER_ID)) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "본인이 작성한 댓글만 삭제할 수 있습니다."
+            );
+        }
+
+        // 4. 삭제
+        commentRepository.delete(comment);
     }
 }

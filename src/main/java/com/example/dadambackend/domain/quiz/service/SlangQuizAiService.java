@@ -58,19 +58,101 @@ public class SlangQuizAiService {
 
         try {
             // 🔹 GPT가 만든 JSON → DTO로 파싱
-            return objectMapper.readValue(json, SlangQuizGenerationResult.class);
+            SlangQuizGenerationResult result =
+                    objectMapper.readValue(json, SlangQuizGenerationResult.class);
+
+            // ✅ 필수 필드 검증
+            if (!isValid(result)) {
+                System.out.println("[SlangQuizAiService] AI 응답 필드 누락/이상 → fallback 사용");
+                return buildFallback();
+            }
+
+            // ✅ choices 안에 answer 가 꼭 포함되도록 + 3지선다 고정
+            normalizeChoices(result);
+
+            return result;
+
         } catch (Exception e) {
-            // 🔹 실패하면 fallback 퀴즈 반환
-            SlangQuizGenerationResult fallback = new SlangQuizGenerationResult();
-            fallback.setQuestion("‘갓생 살기’의 의미는 무엇일까?");
-            fallback.setAnswer("부지런하고 계획적으로 자기계발하며 사는 삶");
-            fallback.setChoices(new String[]{
-                    "아무 생각 없이 편하게만 사는 삶",
-                    "부지런하고 계획적으로 자기계발하며 사는 삶",
-                    "돈을 최대한 많이 버는 삶"
-            });
-            fallback.setExplanation("‘갓생’은 God(갓) + 인생의 합성어로, 스스로 만족할 만큼 성실하게 사는 삶을 의미해.");
-            return fallback;
+            System.out.println("[SlangQuizAiService] JSON 파싱 실패 → fallback 사용: " + e.getMessage());
+            return buildFallback();
         }
+    }
+
+    /** 필수 필드 유효성 체크 */
+    private boolean isValid(SlangQuizGenerationResult r) {
+        if (r == null) return false;
+        if (isBlank(r.getQuestion())) return false;
+        if (isBlank(r.getAnswer())) return false;
+        if (isBlank(r.getExplanation())) return false;
+
+        String[] choices = r.getChoices();
+        if (choices == null || choices.length == 0) return false;
+
+        // 하나라도 내용 있는 보기 있는지만 체크 (너무 빡세게 안 함)
+        boolean hasNonBlankChoice = false;
+        for (String c : choices) {
+            if (!isBlank(c)) {
+                hasNonBlankChoice = true;
+                break;
+            }
+        }
+        if (!hasNonBlankChoice) return false;
+
+        return true;
+    }
+
+    /**
+     * choices 배열에 answer 가 반드시 포함되도록 정리
+     * - 항상 3지선다로 고정
+     */
+    private void normalizeChoices(SlangQuizGenerationResult r) {
+        String answer = r.getAnswer() != null ? r.getAnswer().trim() : "";
+        String[] choices = r.getChoices();
+        if (choices == null) {
+            choices = new String[0];
+        }
+
+        // 항상 3개로 고정
+        String[] newChoices = new String[3];
+
+        // 0번 인덱스: 정답
+        newChoices[0] = answer;
+
+        // 나머지 보기 채우기 (정답과 중복/공백은 제외)
+        int idx = 1;
+        for (String c : choices) {
+            if (idx >= 3) break;
+            if (c == null) continue;
+            String trimmed = c.trim();
+            if (trimmed.isEmpty()) continue;
+            if (answer.equals(trimmed)) continue;
+            newChoices[idx++] = trimmed;
+        }
+
+        // 부족하면 "보기 2", "보기 3" 처럼 채우기
+        while (idx < 3) {
+            newChoices[idx] = "보기 " + (idx + 1);
+            idx++;
+        }
+
+        r.setChoices(newChoices);
+    }
+
+    /** fallback 퀴즈 (DB 제약조건 만족) */
+    private SlangQuizGenerationResult buildFallback() {
+        SlangQuizGenerationResult fallback = new SlangQuizGenerationResult();
+        fallback.setQuestion("‘갓생 살기’의 의미는 무엇일까?");
+        fallback.setAnswer("부지런하고 계획적으로 자기계발하며 사는 삶");
+        fallback.setChoices(new String[]{
+                "아무 생각 없이 편하게만 사는 삶",
+                "부지런하고 계획적으로 자기계발하며 사는 삶",
+                "돈을 최대한 많이 버는 삶"
+        });
+        fallback.setExplanation("‘갓생’은 God(갓) + 인생의 합성어로, 스스로 만족할 만큼 성실하게 사는 삶을 의미해.");
+        return fallback;
+    }
+
+    private boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
     }
 }

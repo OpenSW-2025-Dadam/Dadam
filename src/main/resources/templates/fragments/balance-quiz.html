@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="cards-row" th:fragment="balance-quiz-row">
+
+    <!-- 밸런스 게임 -->
+    <section class="card card-balance" aria-label="오늘의 밸런스 게임">
+        <header class="card-header">
+            <div class="card-header-left">
+                <h2 class="card-title">오늘의 밸런스 게임</h2>
+                <p class="card-subtitle">
+                    가족 선택이 어디에 더 많이 모일까요?
+                </p>
+            </div>
+        </header>
+
+        <div class="balance-body" id="balance-game" data-game-id="">
+            <p class="balance-question" id="balance-question">
+                평생 한 가지 음식만 먹어야 한다면?
+            </p>
+
+            <div class="balance-options">
+                <button
+                        class="balance-option"
+                        type="button"
+                        data-choice="A">
+                    <div class="balance-label">A</div>
+                    <p class="balance-text">라면 🍜</p>
+                    <div class="balance-result">
+                        <div class="balance-bar" data-bar="A"></div>
+                        <span class="balance-percent" data-percent="A">0%</span>
+                    </div>
+                    <div class="balance-avatars" data-avatars="A"></div>
+                </button>
+
+                <button
+                        class="balance-option"
+                        type="button"
+                        data-choice="B">
+                    <div class="balance-label">B</div>
+                    <p class="balance-text">치킨 🍗</p>
+                    <div class="balance-result">
+                        <div class="balance-bar" data-bar="B"></div>
+                        <span class="balance-percent" data-percent="B">0%</span>
+                    </div>
+                    <div class="balance-avatars" data-avatars="B"></div>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 신조어 퀴즈 -->
+    <section class="card card-quiz" aria-label="부모 세대를 위한 신조어 퀴즈">
+        <header class="card-header">
+            <div class="card-header-left">
+                <h2 class="card-title">부모 세대를 위한 신조어 퀴즈</h2>
+                <p class="card-subtitle">
+                    아이들 세대 말, 얼마나 알고 있을까요?
+                </p>
+            </div>
+        </header>
+
+        <div class="quiz-body" id="slang-quiz" data-quiz-id="">
+            <p class="quiz-question" id="quiz-question">
+                “알잘딱깔센”의 뜻은 무엇일까요?
+            </p>
+            <ul class="quiz-options" id="quiz-options">
+                <!-- JS에서 실제 보기 + 아바타 렌더링 -->
+            </ul>
+            <div class="quiz-actions">
+                <button class="btn btn-primary btn-sm"
+                        id="quiz-check-answer"
+                        type="button"
+                        style="display:none;">
+                    정답 확인
+                </button>
+            </div>
+            <p class="quiz-feedback" id="quiz-feedback" aria-live="polite"></p>
+        </div>
+    </section>
+</section>
+</body>
+</html>

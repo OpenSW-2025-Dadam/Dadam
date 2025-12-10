@@ -7,6 +7,7 @@ import com.example.dadambackend.domain.question.repository.QuestionRepository;
 import com.example.dadambackend.global.exception.BusinessException;
 import com.example.dadambackend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,22 +23,36 @@ public class QuestionService {
 
     /**
      * 오늘의 질문을 가져옵니다.
-     * - DB에 오늘(questionDate == 오늘) 질문이 있으면 그대로 반환
+     * - DB에 오늘(questionDate == 오늘) 질문이 하나 이상 있으면
+     *   → createdAt 기준으로 가장 최근 것 1개만 사용
      * - 없으면 AI가 새 질문을 생성하고 저장한 뒤 반환
+     * - 동시성으로 인한 question_date unique 충돌 시
+     *   → 다시 조회하여 이미 생성된 오늘 질문을 반환
      */
-    @Transactional // 저장이 일어날 수 있으므로 readOnly 해제
+    @Transactional
     public Question getTodayQuestion() {
         LocalDate today = LocalDate.now();
 
-        return questionRepository.findByQuestionDate(today)
-                .orElseGet(() -> createTodayQuestionFromAi(today));
+        return questionRepository.findTopByQuestionDateOrderByCreatedAtDesc(today)
+                .orElseGet(() -> {
+                    try {
+                        // 아직 없으면 AI를 통해 새로 생성
+                        return createTodayQuestionFromAi(today);
+                    } catch (DataIntegrityViolationException e) {
+                        // 동시에 다른 트랜잭션이 먼저 insert한 경우
+                        // 다시 한 번 오늘 날짜 기준으로 가장 최근 질문을 조회
+                        return questionRepository.findTopByQuestionDateOrderByCreatedAtDesc(today)
+                                .orElseThrow(() -> e);
+                    }
+                });
     }
 
     /**
      * 특정 날짜의 질문을 조회합니다. (과거 검색용)
+     * - 중복 데이터가 있더라도 가장 최근 것 1개만 사용
      */
     public Question getQuestionByDate(LocalDate date) {
-        return questionRepository.findByQuestionDate(date)
+        return questionRepository.findTopByQuestionDateOrderByCreatedAtDesc(date)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
     }
 
@@ -52,8 +67,9 @@ public class QuestionService {
 
     /**
      * AI를 호출해 오늘의 질문을 생성하고 저장한 뒤 반환합니다.
+     * - getTodayQuestion() 트랜잭션 내부에서만 호출되는 헬퍼 메서드입니다.
      */
-    private Question createTodayQuestionFromAi(LocalDate today) {
+    protected Question createTodayQuestionFromAi(LocalDate today) {
         // 1. AI에게 질문 생성 요청
         QuestionGenerationResult result = questionAiService.generateDailyQuestion();
 

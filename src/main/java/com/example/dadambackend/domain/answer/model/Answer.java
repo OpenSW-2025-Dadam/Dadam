@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "answer")
 public class Answer {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -39,5 +40,13 @@ public class Answer {
         this.user = user;
         this.content = content;
         this.createdAt = LocalDateTime.now();
+    }
+
+    /**
+     * 답변 내용 수정
+     * - createdAt은 그대로 두고, 필요 시 updatedAt 컬럼을 별도로 추가해서 사용 가능
+     */
+    public void updateContent(String content) {
+        this.content = content;
     }
 }

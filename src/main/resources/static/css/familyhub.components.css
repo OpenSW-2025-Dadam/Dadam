@@ -460,3 +460,98 @@
 .fh-icon-trash::before {
     content: "🗑️";
 }
+
+
+/* ============================
+   답변 모달 내 레이아웃 조정
+   - 댓글이 많을 때 모달이 화면을 벗어나지 않도록
+   - 댓글 리스트에만 스크롤 적용
+============================ */
+
+#modal-answer-thread .modal-body {
+    max-height: 70vh;        /* 모달 전체 높이 제한 */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 답변 본문 영역과 간격 조정 */
+#modal-answer-thread #answer-thread-main {
+    margin-bottom: 8px;
+}
+
+/* 댓글 리스트: 높이 제한 + 스크롤 */
+#modal-answer-thread #comment-list {
+    max-height: 260px;       /* 필요하면 숫자 조절 */
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-bottom: 12px;
+}
+
+/* 댓글 하단 영역(시간 + 수정/삭제 버튼) 정렬 */
+.comment-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 댓글 액션 버튼 (수정/삭제) */
+.comment-actions {
+    display: flex;
+    gap: 4px;
+}
+
+/* 모달 안 댓글 수정/삭제 링크 버튼을 작게 보이게 */
+.comment-actions .link-button {
+    font-size: 11px;
+    padding: 0;
+}
+
+/* ============================
+   아바타 공통 스타일 강제 재정의
+   (글자가 확실히 보이도록)
+   ============================ */
+
+.avatar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    overflow: hidden;
+    font-size: 14px; /* 기본 폰트 크기 */
+}
+
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+}
+
+.avatar-md {
+    width: 40px;
+    height: 40px;
+}
+
+.avatar-lg {
+    width: 56px;
+    height: 56px;
+}
+
+/* 이니셜 글자 스타일 */
+.avatar .avatar-initial {
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    font-weight: 600;
+    line-height: 1;
+    color: inherit;
+    visibility: visible !important;
+}
+
+/* 사진이 있을 때 배경 이미지 위에 얹는 설정 */
+.avatar.has-avatar-image {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}

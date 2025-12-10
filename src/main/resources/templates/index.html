@@ -111,11 +111,35 @@
                             가족과 함께한 여행 중 가장 기억에 남는 순간은 언제였나요?
                         </p>
 
+                        <!-- ✅ 질문 만족도 조사 UI (프론트 전용) -->
                         <div class="question-meta">
-                            <span class="chip chip-soft">
-                                <span class="fh-icon-heart-small"></span>
-                                <span id="question-like-count">12</span>명이 좋아했어요
-                            </span>
+                            <div class="question-rating">
+                                <span class="chip chip-outline question-rating-label">
+                                    오늘의 질문은 어땠나요?
+                                </span>
+                                <div class="question-rating-buttons" role="group" aria-label="질문 만족도 선택">
+                                    <button type="button"
+                                            class="chip chip-soft question-rating-btn"
+                                            data-rating="good">
+                                        👍 좋았어요
+                                    </button>
+                                    <button type="button"
+                                            class="chip chip-soft question-rating-btn"
+                                            data-rating="ok">
+                                        🙂 괜찮았어요
+                                    </button>
+                                    <button type="button"
+                                            class="chip chip-soft question-rating-btn"
+                                            data-rating="bad">
+                                        🤔 별로였어요
+                                    </button>
+                                </div>
+                                <!-- 단순 프론트 전용 상태 텍스트 -->
+                                <p class="question-rating-status text-soft"
+                                   id="question-rating-status"
+                                   aria-live="polite"></p>
+                            </div>
+
                             <span class="chip chip-outline">
                                 모든 가족 답변 완료 시 다음 질문이 열립니다
                             </span>
@@ -183,10 +207,6 @@
                                 가족 선택이 어디에 더 많이 모일까요?
                             </p>
                         </div>
-                        <button class="ghost-icon-btn" id="regen-balance" type="button">
-                            <span class="fh-icon-refresh"></span>
-                            <span>다른 주제</span>
-                        </button>
                     </header>
 
                     <div class="balance-body" id="balance-game" data-game-id="">
@@ -235,10 +255,10 @@
                                 아이들 세대 말, 얼마나 알고 있을까요?
                             </p>
                         </div>
-                        <button class="ghost-icon-btn" id="regen-quiz" type="button">
-                            <span class="fh-icon-refresh"></span>
-                            <span>다른 문제</span>
-                        </button>
+                        <!--                        <button class="ghost-icon-btn" id="regen-quiz" type="button">-->
+                        <!--                            <span class="fh-icon-refresh"></span>-->
+                        <!--                            <span>다른 문제</span>-->
+                        <!--                        </button>-->
                     </header>
 
                     <div class="quiz-body" id="slang-quiz" data-quiz-id="">
@@ -246,8 +266,16 @@
                             “알잘딱깔센”의 뜻은 무엇일까요?
                         </p>
                         <ul class="quiz-options" id="quiz-options">
-                            <!-- JS에서 실제 보기 렌더링 -->
+                            <!-- JS에서 실제 보기 + 아바타 렌더링 -->
                         </ul>
+                        <div class="quiz-actions">
+                            <button class="btn btn-primary btn-sm"
+                                    id="quiz-check-answer"
+                                    type="button"
+                                    style="display:none;">
+                                정답 확인
+                            </button>
+                        </div>
                         <p class="quiz-feedback" id="quiz-feedback" aria-live="polite"></p>
                     </div>
                 </section>
@@ -426,8 +454,24 @@
                     </select>
                 </div>
 
+                <!-- 👨‍👩‍👧 가족 코드 입력 영역 -->
+                <div class="field-group">
+                    <label class="field-label" for="family-code-input">가족 코드</label>
+                    <div class="field-row">
+                        <input
+                                id="family-code-input"
+                                class="input"
+                                type="text"
+                                placeholder="초대받은 가족 코드를 입력하세요"
+                        />
+                        <button class="btn btn-ghost" type="button" id="family-code-check-btn">확인</button>
+                    </div>
+                    <p class="field-help">확인을 눌러도 코드 입력창의 내용은 유지됩니다.</p>
+                </div>
+
                 <div class="modal-footer">
-                    <button class="btn btn-ghost" type="button" data-close-modal="modal-profile">취소</button>
+                    <button class="btn btn-ghost" type="button" data-close-modal="modal-profile">닫기</button>
+                    <button class="btn btn-ghost" type="button" id="logout-btn">로그아웃</button>
                     <button class="btn btn-primary" type="submit">저장</button>
                 </div>
             </form>
@@ -439,14 +483,14 @@
 <div id="modal-auth" class="modal-backdrop">
     <div class="modal">
         <header class="modal-header">
-            <h2 class="modal-title">로그인 / 회원가입</h2>
+            <h2 class="modal-title">로그인</h2>
             <button class="ghost-icon-btn" type="button" data-close-modal="modal-auth">
                 <span class="fh-icon-close"></span>
             </button>
         </header>
 
         <div class="modal-body">
-            <!-- 탭 -->
+            <!-- 탭 (원하면 나중에 숨겨도 됨) -->
             <div class="auth-tabs">
                 <button class="auth-tab is-active" type="button" data-auth-tab="login">로그인</button>
                 <button class="auth-tab" type="button" data-auth-tab="signup">회원가입</button>
@@ -468,6 +512,12 @@
                         <button class="btn btn-primary" type="submit">로그인</button>
                     </div>
                 </form>
+
+                <!-- 👇 로그인 아래에 회원가입 안내 -->
+                <p class="auth-helper-text">
+                    계정이 아직 없으신가요?
+                    <button type="button" class="link-button" id="go-signup-link">회원가입</button>
+                </p>
             </section>
 
             <!-- 회원가입 패널 -->
@@ -490,10 +540,16 @@
                         <button class="btn btn-primary" type="submit">회원가입</button>
                     </div>
                 </form>
+
+                <p class="auth-helper-text">
+                    이미 계정이 있으신가요?
+                    <button type="button" class="link-button" id="go-login-link">로그인</button>
+                </p>
             </section>
         </div>
     </div>
 </div>
+
 
 <!-- 📅 약속 만들기 모달 -->
 <div id="modal-schedule" class="modal-backdrop">
@@ -507,35 +563,92 @@
 
         <div class="modal-body">
             <form id="schedule-form">
+                <!-- ✅ title: 필수 -->
                 <div class="field-group">
                     <label class="field-label" for="schedule-title">약속 이름</label>
-                    <input id="schedule-title" class="input" type="text" placeholder="예: 토요일 가족 외식" required />
+                    <input
+                            id="schedule-title"
+                            name="title"
+                            class="input"
+                            type="text"
+                            placeholder="예: 토요일 가족 외식"
+                            required
+                    />
                 </div>
 
                 <div class="field-group field-row">
+                    <!-- ✅ date: 필수 -->
                     <div class="field-col">
                         <label class="field-label" for="schedule-date">날짜</label>
-                        <input id="schedule-date" class="input" type="date" required />
+                        <input
+                                id="schedule-date"
+                                name="date"
+                                class="input"
+                                type="date"
+                                required
+                        />
                     </div>
+
+                    <!-- ⭕ time: 선택 -->
                     <div class="field-col">
                         <label class="field-label" for="schedule-time">시간</label>
-                        <input id="schedule-time" class="input" type="time" />
+                        <input
+                                id="schedule-time"
+                                name="time"
+                                class="input"
+                                type="time"
+                        />
                     </div>
                 </div>
 
+                <!-- ⭕ place: 선택 -->
                 <div class="field-group">
                     <label class="field-label" for="schedule-place">장소</label>
-                    <input id="schedule-place" class="input" type="text" placeholder="예: 집 앞 식당" />
+                    <input
+                            id="schedule-place"
+                            name="place"
+                            class="input"
+                            type="text"
+                            placeholder="예: 집 앞 식당"
+                    />
                 </div>
 
+                <!-- ⭕ memo: 선택 -->
                 <div class="field-group">
                     <label class="field-label" for="schedule-memo">메모</label>
-                    <textarea id="schedule-memo" class="textarea" rows="3" placeholder="약속에 대한 추가 메모를 적어 주세요."></textarea>
+                    <textarea
+                            id="schedule-memo"
+                            name="memo"
+                            class="textarea"
+                            rows="3"
+                            placeholder="약속에 대한 추가 메모를 적어 주세요."
+                    ></textarea>
                 </div>
 
+                <!-- ⭕ type: 사용자가 직접 선택 (선택 사항) -->
+                <div class="field-group">
+                    <label class="field-label" for="schedule-type">약속 종류</label>
+                    <select
+                            id="schedule-type"
+                            name="type"
+                            class="select"
+                    >
+                        <option value="" selected>약속 종류를 선택해 주세요.</option>
+                        <option value="dinner">식사</option>
+                        <option value="trip">여행</option>
+                        <option value="event">기타</option>
+                    </select>
+                </div>
+
+                <!-- ⭕ remind: 선택(체크/해제) -->
                 <div class="field-group">
                     <label class="checkbox">
-                        <input id="schedule-remind" type="checkbox" checked />
+                        <input
+                                id="schedule-remind"
+                                name="remind"
+                                type="checkbox"
+                                checked
+                        />
                         <span>약속 전에 알림 받기</span>
                     </label>
                 </div>
@@ -546,6 +659,63 @@
                 </div>
             </form>
         </div>
+    </div>
+</div>
+
+<!-- 📅 날짜별 약속 리스트 모달 -->
+<div id="modal-day-events" class="modal-backdrop">
+    <div class="modal">
+        <header class="modal-header">
+            <h2 class="modal-title">
+                <span id="day-events-date-label">2025년 12월 10일</span>의 약속
+            </h2>
+            <button class="ghost-icon-btn" type="button" data-close-modal="modal-day-events">
+                <span class="fh-icon-close"></span>
+            </button>
+        </header>
+        <div class="modal-body">
+            <div id="day-events-list">
+                <!-- dadam.ui.js에서 해당 날짜의 약속 리스트 렌더링 -->
+            </div>
+        </div>
+        <footer class="modal-footer">
+            <button class="btn btn-primary" type="button" id="day-events-create-btn">
+                이 날짜에 새 약속 만들기
+            </button>
+        </footer>
+    </div>
+</div>
+
+<!-- 📌 약속 상세 모달 -->
+<div id="modal-schedule-detail" class="modal-backdrop">
+    <div class="modal">
+        <header class="modal-header">
+            <h2 class="modal-title" id="schedule-detail-title">약속 상세</h2>
+            <button class="ghost-icon-btn" type="button" data-close-modal="modal-schedule-detail">
+                <span class="fh-icon-close"></span>
+            </button>
+        </header>
+        <div class="modal-body">
+            <div class="field-group">
+                <p><strong>날짜</strong> : <span id="schedule-detail-date"></span></p>
+            </div>
+            <div class="field-group">
+                <p><strong>시간</strong> : <span id="schedule-detail-time"></span></p>
+            </div>
+            <div class="field-group">
+                <p><strong>장소</strong> : <span id="schedule-detail-place"></span></p>
+            </div>
+            <div class="field-group">
+                <p><strong>종류</strong> : <span id="schedule-detail-type"></span></p>
+            </div>
+            <div class="field-group">
+                <p><strong>메모</strong> : <span id="schedule-detail-memo"></span></p>
+            </div>
+        </div>
+        <footer class="modal-footer">
+            <button class="btn btn-ghost" type="button" id="schedule-detail-edit-btn">수정하기</button>
+            <button class="btn btn-danger" type="button" id="schedule-detail-delete-btn">삭제하기</button>
+        </footer>
     </div>
 </div>
 
@@ -560,6 +730,11 @@
         </header>
         <div class="modal-body">
             <div id="answer-thread-main"></div>
+            <div class="answer-thread-actions" id="answer-thread-actions" style="display:none; margin-top:12px; gap:8px; display:flex; justify-content:flex-end;">
+                <button class="btn btn-ghost btn-sm" type="button" id="answer-edit-btn">수정</button>
+                <button class="btn btn-ghost btn-sm" type="button" id="answer-edit-cancel-btn" style="display:none;">수정 취소</button>
+                <button class="btn btn-danger btn-sm" type="button" id="answer-delete-btn">삭제</button>
+            </div>
             <hr />
             <ul class="comment-list" id="comment-list"></ul>
 
@@ -578,7 +753,9 @@
 
 <!-- ================= SCRIPTS ================= -->
 <script th:src="@{/js/dadam.core.js}"></script>
-<script th:src="@{/js/dadam.profiles-games.js}"></script>
+<script th:src="@{/js/dadam.profile.js}"></script>
+<script th:src="@{/js/dadam.balance.js}"></script>
+<script th:src="@{/js/dadam.quiz.js}"></script>
 <script th:src="@{/js/dadam.answers.js}"></script>
 <script th:src="@{/js/dadam.ui.js}"></script>
 

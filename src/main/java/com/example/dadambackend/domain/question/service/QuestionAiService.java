@@ -19,11 +19,9 @@ public class QuestionAiService {
 
     public QuestionGenerationResult generateDailyQuestion() {
 
-        // 🔹 오늘은 어떤 카테고리 질문을 만들지 서버에서 먼저 랜덤으로 선택
         String[] categories = {"TRAVEL", "HOBBY", "MEMORY"};
         String targetCategory = categories[random.nextInt(categories.length)];
 
-        // 🔹 역할/성격 정의 (system 프롬프트)
         String systemPrompt = """
             너는 세대 간 소통을 돕는 '가족 대화 질문 생성기'야.
             정치, 혐오, 폭력, 선정적인 내용은 절대 포함하지 마.
@@ -31,7 +29,6 @@ public class QuestionAiService {
             반드시 JSON 형식으로만 응답해야 해.
             """;
 
-        // 🔹 출력 형식 정의 + 실제 요청 내용 (user 프롬프트)
         String userPrompt = ("""
             아래 형식의 JSON으로만 응답해라.
 
@@ -48,14 +45,13 @@ public class QuestionAiService {
             - JSON 이외의 설명, 말줄임표, 주석 등은 절대 넣지 마라.
             """).formatted(targetCategory, targetCategory, targetCategory);
 
-        // 🔹 AiClient를 호출해서 JSON 문자열 받기
-        String json = aiClient.request(systemPrompt, userPrompt);
-
         try {
-            // 🔹 GPT가 만들어준 JSON을 QuestionGenerationResult로 변환
+            // 🔹 AiClient 호출 + JSON 파싱 전체를 try 안으로
+            String json = aiClient.request(systemPrompt, userPrompt);
             return objectMapper.readValue(json, QuestionGenerationResult.class);
-        } catch (JsonProcessingException e) {
-            // 🔹 실패하면 fallback
+        } catch (Exception e) {
+            System.out.println("[QuestionAiService] GPT 질문 생성 실패, fallback 사용: " + e.getMessage());
+
             QuestionGenerationResult fallback = new QuestionGenerationResult();
             fallback.setContent("요즘 가장 감사하게 느끼는 일은 뭐야?");
             fallback.setCategory("MEMORY");

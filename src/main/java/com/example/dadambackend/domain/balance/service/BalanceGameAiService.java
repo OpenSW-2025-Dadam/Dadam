@@ -63,15 +63,47 @@ public class BalanceGameAiService {
 
         try {
             // 🔹 GPT가 만든 JSON을 DTO로 파싱
-            return objectMapper.readValue(json, BalanceGameGenerationResult.class);
+            BalanceGameGenerationResult result =
+                    objectMapper.readValue(json, BalanceGameGenerationResult.class);
+
+            // ✅ 필수 필드 검증 (null / 빈 문자열이면 fallback으로 교체)
+            if (result == null
+                    || isBlank(result.getQuestion())
+                    || isBlank(result.getOptionA())
+                    || isBlank(result.getOptionB())
+                    || isBlank(result.getCategory())) {
+
+                System.out.println("[BalanceGameAiService] AI 응답 필드 누락 → fallback 사용");
+                return buildFallback();
+            }
+
+            // ✅ category 정규화 (혹시 소문자로 올 수도 있어서)
+            result.setCategory(
+                    result.getCategory() == null
+                            ? "LIFE"
+                            : result.getCategory().trim().toUpperCase()
+            );
+
+            return result;
+
         } catch (Exception e) {
-            // 🔹 실패하면 fallback (더미 데이터)
-            BalanceGameGenerationResult fallback = new BalanceGameGenerationResult();
-            fallback.setQuestion("가족 여행 스타일, 계획 촘촘 vs 즉흥 자유여행 중 뭐가 더 좋아?");
-            fallback.setOptionA("계획 촘촘 여행");
-            fallback.setOptionB("즉흥 자유여행");
-            fallback.setCategory("LIFE");
-            return fallback;
+            // 🔹 JSON 파싱 자체에 실패하면 fallback
+            System.out.println("[BalanceGameAiService] JSON 파싱 실패 → fallback 사용: " + e.getMessage());
+            return buildFallback();
         }
+    }
+
+    // 공용 fallback 생성 메서드
+    private BalanceGameGenerationResult buildFallback() {
+        BalanceGameGenerationResult fallback = new BalanceGameGenerationResult();
+        fallback.setQuestion("가족 여행 스타일, 계획 촘촘 vs 즉흥 자유여행 중 뭐가 더 좋아?");
+        fallback.setOptionA("계획 촘촘 여행");
+        fallback.setOptionB("즉흥 자유여행");
+        fallback.setCategory("LIFE");
+        return fallback;
+    }
+
+    private boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
     }
 }

@@ -9,29 +9,34 @@ import java.time.LocalDate;
 @Getter
 @Builder
 public class ScheduleResponse {
-    private Long id;
-    private String appointmentName;
-    private LocalDate appointmentDate;
-    private int iconType;
-    private boolean isUpcoming; // 다가오는 일정 여부
 
-    public static ScheduleResponse from(Schedule schedule, boolean isUpcoming) {
+    private Long id;
+
+    private String title;
+    private LocalDate date;
+    private String time;
+    private String place;
+    private String memo;
+    private String type;
+    private boolean remind;
+
+    private boolean upcoming;  // 다가오는 일정 여부
+
+    public static ScheduleResponse from(Schedule schedule, boolean upcoming) {
         return ScheduleResponse.builder()
                 .id(schedule.getId())
-                .appointmentName(schedule.getAppointmentName())
-                .appointmentDate(schedule.getAppointmentDate())
-                .iconType(schedule.getIconType())
-                .isUpcoming(isUpcoming)
+                .title(schedule.getTitle())
+                .date(schedule.getDate())
+                .time(schedule.getTime())
+                .place(schedule.getPlace())
+                .memo(schedule.getMemo())
+                .type(schedule.getType())
+                .remind(schedule.isRemind())
+                .upcoming(upcoming)
                 .build();
     }
 
     public static ScheduleResponse from(Schedule schedule) {
-        return ScheduleResponse.builder()
-                .id(schedule.getId())
-                .appointmentName(schedule.getAppointmentName())
-                .appointmentDate(schedule.getAppointmentDate())
-                .iconType(schedule.getIconType())
-                .isUpcoming(false) // 전체 조회 시에는 기본값 false
-                .build();
+        return from(schedule, false);
     }
 }

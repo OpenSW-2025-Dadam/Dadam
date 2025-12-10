@@ -1,22 +1,24 @@
 /* =====================================================
    dadam.ui.js
-   - 캘린더 렌더링 (로컬 일정 데이터 기반)
-   - 약속 만들기 모달 & 일정 리스트
-   - 로그인/회원가입 모달 탭 전환
+   - 캘린더 렌더링 (로컬 + 서버 일정 데이터 기반)
+   - 날짜별 약속 목록 모달
+   - 약속 상세 모달 + 약속 만들기 모달
    - 헤더 네비/부가 버튼 UX
 ===================================================== */
 
 /* -----------------------------------------------------
-   📌 로컬스토리지 키 보완 (이벤트용)
+   로컬스토리지 키 보완 (이벤트용)
 ----------------------------------------------------- */
 
-// core.js에서 만든 DADAM_KEYS에 일정용 키를 추가
 if (!DADAM_KEYS.EVENTS) {
     DADAM_KEYS.EVENTS = "dadam_events";
 }
 
+/* 백엔드 캘린더 API 기본 경로 */
+const SCHEDULE_API = `${API_BASE}/schedules`;
+
 /* -----------------------------------------------------
-   📅 캘린더 / 일정 관련
+   캘린더 / 일정 관련 DOM
 ----------------------------------------------------- */
 
 const calendarTitleEl = document.getElementById("calendar-title");
@@ -25,6 +27,7 @@ const calendarPrevBtn = document.getElementById("calendar-prev");
 const calendarNextBtn = document.getElementById("calendar-next");
 const eventListEl = document.getElementById("event-list");
 
+/* 약속 만들기 모달 */
 const scheduleModalId = "modal-schedule";
 const scheduleForm = document.getElementById("schedule-form");
 const scheduleTitleInput = document.getElementById("schedule-title");
@@ -33,7 +36,25 @@ const scheduleTimeInput = document.getElementById("schedule-time");
 const schedulePlaceInput = document.getElementById("schedule-place");
 const scheduleMemoInput = document.getElementById("schedule-memo");
 const scheduleRemindInput = document.getElementById("schedule-remind");
+const scheduleTypeInput = document.getElementById("schedule-type");
 const openScheduleModalBtn = document.getElementById("open-schedule-modal");
+
+/* 날짜별 약속 목록 모달 */
+const dayEventsModalId = "modal-day-events";
+const dayEventsListEl = document.getElementById("day-events-list");
+const dayEventsDateLabelEl = document.getElementById("day-events-date-label");
+const dayEventsCreateBtn = document.getElementById("day-events-create-btn");
+
+/* 약속 상세 모달 */
+const scheduleDetailModalId = "modal-schedule-detail";
+const scheduleDetailTitleEl = document.getElementById("schedule-detail-title");
+const scheduleDetailDateEl = document.getElementById("schedule-detail-date");
+const scheduleDetailTimeEl = document.getElementById("schedule-detail-time");
+const scheduleDetailPlaceEl = document.getElementById("schedule-detail-place");
+const scheduleDetailTypeEl = document.getElementById("schedule-detail-type");
+const scheduleDetailMemoEl = document.getElementById("schedule-detail-memo");
+const scheduleDetailEditBtn = document.getElementById("schedule-detail-edit-btn");
+const scheduleDetailDeleteBtn = document.getElementById("schedule-detail-delete-btn");
 
 let calendarState = {
     year: new Date().getFullYear(),
@@ -41,10 +62,16 @@ let calendarState = {
 };
 
 let selectedDateForSchedule = null;
-/** ✏️ 수정 모드인지 구분하기 위한 변수 (null이면 새 일정 생성 모드) */
+/** 수정 모드 여부 (null이면 새 일정 생성 모드) */
 let editingEventId = null;
 
-/* ---- 일정 데이터 헬퍼 ---- */
+/** 상세 모달에서 현재 보고 있는 일정 id/객체 */
+let currentDetailScheduleId = null;
+let currentDetailSchedule = null;
+
+/* -----------------------------------------------------
+   일정 데이터 헬퍼 (로컬)
+----------------------------------------------------- */
 
 function loadEvents() {
     return load(DADAM_KEYS.EVENTS, []);
@@ -54,7 +81,7 @@ function saveEvents(events) {
     save(DADAM_KEYS.EVENTS, events);
 }
 
-/* "2025-11-20" 처럼 yyyy-mm-dd 만들기 */
+/* "2025-11-20" 형식 yyyy-mm-dd */
 function formatDateKey(dateObj) {
     const y = dateObj.getFullYear();
     const m = String(dateObj.getMonth() + 1).padStart(2, "0");
@@ -68,7 +95,134 @@ function parseDateKey(dateKey) {
     return new Date(y, m - 1, d);
 }
 
-/* ---- 캘린더 렌더링 ---- */
+/* 보기용: "2025-12-10" → "2025년 12월 10일" */
+function formatKoreanDate(dateStr) {
+    if (!dateStr) return "";
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return `${y}년 ${m}월 ${d}일`;
+}
+
+/* -----------------------------------------------------
+   서버 일정 관련 헬퍼
+----------------------------------------------------- */
+
+/**
+ * 서버 응답 ScheduleResponse / ScheduleUpdateResponse 를
+ * 프론트 이벤트 객체 형태로 변환
+ */
+function mapScheduleToEvent(schedule) {
+    const title = schedule.title ?? schedule.appointmentName ?? "";
+    const date = schedule.date ?? schedule.appointmentDate;
+    const type = schedule.type ?? null;   // ✅ 더 이상 강제로 dinner/trip 안 넣기
+
+    return {
+        id: String(schedule.id),
+        title,
+        date,
+        time: schedule.time ?? "",
+        place: schedule.place ?? "",
+        memo: schedule.memo ?? "",
+        type,                              // 👉 진짜 DB 값 그대로 (null 허용)
+        remind: schedule.remind ?? false,
+    };
+}
+
+/** 인증 헤더 공통 처리 */
+function buildAuthHeaders(base = {}) {
+    const headers = { ...base };
+    const token = getAuthToken?.();
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
+/**
+ * 서버에서 다가오는 일정 목록을 가져와
+ * 로컬스토리지에 반영하고 캘린더/리스트를 다시 그린다.
+ */
+async function syncEventsFromServer() {
+    try {
+        const res = await fetch(`${SCHEDULE_API}/upcoming`, {
+            method: "GET",
+            headers: buildAuthHeaders({
+                "Content-Type": "application/json",
+            }),
+        });
+
+        if (!res.ok) {
+            console.error("다가오는 일정 조회 실패:", res.status);
+            return;
+        }
+
+        const data = await res.json(); // [ScheduleResponse...]
+        const events = Array.isArray(data)
+            ? data.map((s) => mapScheduleToEvent(s))
+            : [];
+
+        saveEvents(events);
+        renderCalendar(calendarState.year, calendarState.month);
+        renderEventList();
+    } catch (err) {
+        console.error("서버 일정 동기화 중 오류:", err);
+    }
+}
+
+/**
+ * 특정 날짜 기준 서버에서 일정 목록 조회
+ * GET /api/v1/schedules?date=YYYY-MM-DD
+ */
+async function fetchSchedulesByDate(dateKey) {
+    try {
+        const url = `${SCHEDULE_API}?date=${encodeURIComponent(dateKey)}`;
+        const res = await fetch(url, {
+            method: "GET",
+            headers: buildAuthHeaders({
+                "Content-Type": "application/json",
+            }),
+        });
+
+        if (!res.ok) {
+            throw new Error(`특정 날짜 일정 조회 실패: ${res.status}`);
+        }
+
+        const data = await res.json(); // [ScheduleResponse...]
+        return Array.isArray(data) ? data : [];
+    } catch (err) {
+        console.error(err);
+        alert("해당 날짜의 약속을 불러오는 중 문제가 발생했습니다.");
+        return [];
+    }
+}
+
+/**
+ * 단일 일정 상세 조회
+ * GET /api/v1/schedules/{id}
+ */
+async function fetchScheduleDetail(scheduleId) {
+    try {
+        const res = await fetch(`${SCHEDULE_API}/${scheduleId}`, {
+            method: "GET",
+            headers: buildAuthHeaders({
+                "Content-Type": "application/json",
+            }),
+        });
+
+        if (!res.ok) {
+            throw new Error(`일정 상세 조회 실패: ${res.status}`);
+        }
+
+        return await res.json();
+    } catch (err) {
+        console.error(err);
+        alert("약속 상세를 불러오는 중 문제가 발생했습니다.");
+        return null;
+    }
+}
+
+/* -----------------------------------------------------
+   캘린더 렌더링
+----------------------------------------------------- */
 
 function renderCalendar(year, monthIndex) {
     if (!calendarGridEl || !calendarTitleEl) return;
@@ -78,10 +232,8 @@ function renderCalendar(year, monthIndex) {
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
     const events = loadEvents();
 
-    // 타이틀: "2025년 11월"
     calendarTitleEl.textContent = `${year}년 ${monthIndex + 1}월`;
 
-    // 기존 내용 비우기
     calendarGridEl.innerHTML = "";
 
     // 앞쪽 공백(지난달 자리)
@@ -110,7 +262,6 @@ function renderCalendar(year, monthIndex) {
         dayNumberEl.className = "calendar-day-number";
         dayNumberEl.textContent = day;
 
-        // 일정 유무 체크
         const todaysEvents = events.filter((ev) => ev.date === dateKey);
 
         const dotWrapper = document.createElement("div");
@@ -118,9 +269,11 @@ function renderCalendar(year, monthIndex) {
             todaysEvents.slice(0, 2).forEach((ev) => {
                 const dot = document.createElement("div");
                 dot.className = "calendar-event-dot";
-                // 간단 색 구분 (저녁/여행 용)
-                if (ev.type === "trip") dot.classList.add("calendar-event-trip");
-                else dot.classList.add("calendar-event-dinner");
+                if (ev.type === "trip") {
+                    dot.classList.add("calendar-event-trip");
+                } else {
+                    dot.classList.add("calendar-event-dinner");
+                }
                 dotWrapper.appendChild(dot);
             });
         }
@@ -132,7 +285,9 @@ function renderCalendar(year, monthIndex) {
     }
 }
 
-/* ---- 일정 리스트 렌더링 ---- */
+/* -----------------------------------------------------
+   전체 일정 리스트 렌더링 (사이드 리스트)
+----------------------------------------------------- */
 
 function renderEventList() {
     if (!eventListEl) return;
@@ -151,7 +306,6 @@ function renderEventList() {
         return;
     }
 
-    // 날짜순 정렬
     const sorted = events.slice().sort((a, b) => {
         if (a.date === b.date) return (a.time || "").localeCompare(b.time || "");
         return a.date.localeCompare(b.date);
@@ -169,7 +323,6 @@ function renderEventList() {
             const typeClass =
                 ev.type === "trip" ? "event-type-trip" : "event-type-dinner";
 
-            // 알림 켜짐 여부에 따라 클래스 부여
             const remindOnClass = ev.remind ? " is-remind-on" : "";
 
             return `
@@ -183,12 +336,6 @@ function renderEventList() {
             <button class="ghost-icon-btn event-remind-btn${remindOnClass}" type="button" aria-label="알림 토글">
               <span class="fh-icon-bell-small"></span>
             </button>
-            <button class="ghost-icon-btn event-edit-btn" type="button" aria-label="일정 수정">
-              <span class="fh-icon-edit"></span>
-            </button>
-            <button class="ghost-icon-btn event-delete-btn" type="button" aria-label="일정 삭제">
-              <span class="fh-icon-trash"></span>
-            </button>
           </div>
         </article>
       `;
@@ -196,7 +343,9 @@ function renderEventList() {
         .join("");
 }
 
-/* ---- 약속 만들기 모달 ---- */
+/* -----------------------------------------------------
+   약속 만들기 모달
+----------------------------------------------------- */
 
 /**
  * 약속 모달 열기
@@ -205,7 +354,6 @@ function renderEventList() {
  */
 function openScheduleModal(defaultDateKey = null, eventToEdit = null) {
     if (eventToEdit) {
-        // ✏️ 수정 모드
         editingEventId = eventToEdit.id;
 
         if (scheduleDateInput) scheduleDateInput.value = eventToEdit.date;
@@ -215,15 +363,16 @@ function openScheduleModal(defaultDateKey = null, eventToEdit = null) {
         if (scheduleMemoInput) scheduleMemoInput.value = eventToEdit.memo || "";
         if (scheduleRemindInput)
             scheduleRemindInput.checked = Boolean(eventToEdit.remind);
+        if (scheduleTypeInput) {
+            scheduleTypeInput.value = eventToEdit.type || "";   // 🔹 null이면 "선택 안 함"
+        }
     } else {
-        // ➕ 새 일정 생성 모드
         editingEventId = null;
 
         if (scheduleDateInput) {
             if (defaultDateKey) {
                 scheduleDateInput.value = defaultDateKey;
             } else {
-                // 오늘 날짜 기본값
                 const todayKey = formatDateKey(new Date());
                 scheduleDateInput.value = todayKey;
             }
@@ -234,29 +383,167 @@ function openScheduleModal(defaultDateKey = null, eventToEdit = null) {
         if (schedulePlaceInput) schedulePlaceInput.value = "";
         if (scheduleMemoInput) scheduleMemoInput.value = "";
         if (scheduleRemindInput) scheduleRemindInput.checked = true;
+        if (scheduleTypeInput) scheduleTypeInput.value = "";
     }
 
     openModal(scheduleModalId);
 }
 
-/* "약속 만들기" 버튼 */
+/* "약속 만들기" 버튼 (헤더 등) */
 openScheduleModalBtn?.addEventListener("click", () => {
     openScheduleModal(selectedDateForSchedule);
 });
 
-/* 캘린더 날짜 클릭 → 해당 날짜로 약속 만들기 */
+/* -----------------------------------------------------
+   날짜 클릭 → 해당 날짜 약속 목록 모달
+----------------------------------------------------- */
+
+async function openDayEventsModal(dateKey) {
+    if (!dayEventsListEl) return;
+
+    selectedDateForSchedule = dateKey;
+
+    if (dayEventsDateLabelEl) {
+        dayEventsDateLabelEl.textContent = formatKoreanDate(dateKey);
+    }
+
+    const schedules = await fetchSchedulesByDate(dateKey);
+
+    if (!schedules || schedules.length === 0) {
+        dayEventsListEl.innerHTML = `
+      <p class="day-events-empty">해당 날짜에는 등록된 약속이 없어요.</p>
+    `;
+    } else {
+        dayEventsListEl.innerHTML = schedules
+            .map((s) => {
+                const ev = mapScheduleToEvent(s);
+                const timeLabel = ev.time ? ` · ${ev.time}` : "";
+                const placeLabel = ev.place ? ` · ${ev.place}` : "";
+                return `
+          <button type="button"
+                  class="day-event-item"
+                  data-schedule-id="${ev.id}">
+            <span class="day-event-title">${ev.title}</span>
+            <span class="day-event-meta">${formatKoreanDate(ev.date)}${timeLabel}${placeLabel}</span>
+          </button>
+        `;
+            })
+            .join("");
+    }
+
+    openModal(dayEventsModalId);
+}
+
+/* 캘린더 날짜 클릭 핸들러 */
 document.addEventListener("click", (e) => {
     const cell = e.target.closest(".calendar-cell");
     if (!cell || !calendarGridEl || !cell.dataset.date) return;
-    // 비어있는 칸(calendar-cell-empty) 예외
     if (cell.classList.contains("calendar-cell-empty")) return;
 
-    selectedDateForSchedule = cell.dataset.date;
+    const dateKey = cell.dataset.date;
+    openDayEventsModal(dateKey);
+});
+
+/* 날짜별 모달에서 "이 날짜에 새 약속 만들기" 버튼 */
+dayEventsCreateBtn?.addEventListener("click", () => {
+    if (!selectedDateForSchedule) return;
+    closeModal(dayEventsModalId);
     openScheduleModal(selectedDateForSchedule);
 });
 
-/* 약속 폼 submit */
-scheduleForm?.addEventListener("submit", (e) => {
+/* 날짜별 모달 내부: 약속 클릭 → (리스트 모달 닫고) 상세 모달 */
+document.addEventListener("click", (e) => {
+    const item = e.target.closest(".day-event-item");
+    if (!item || !item.dataset.scheduleId) return;
+
+    const scheduleId = item.dataset.scheduleId;
+    closeModal(dayEventsModalId);
+    openScheduleDetailModal(scheduleId);
+});
+
+/* -----------------------------------------------------
+   약속 상세 모달
+----------------------------------------------------- */
+
+async function openScheduleDetailModal(scheduleId) {
+    const schedule = await fetchScheduleDetail(scheduleId);
+    if (!schedule) return;
+
+    const ev = mapScheduleToEvent(schedule);
+    currentDetailScheduleId = ev.id;
+    currentDetailSchedule = schedule;
+    selectedDateForSchedule = ev.date;
+
+    if (scheduleDetailTitleEl) scheduleDetailTitleEl.textContent = ev.title || "";
+    if (scheduleDetailDateEl) scheduleDetailDateEl.textContent = formatKoreanDate(ev.date);
+    if (scheduleDetailTimeEl) scheduleDetailTimeEl.textContent = ev.time || "-";
+    if (scheduleDetailPlaceEl) scheduleDetailPlaceEl.textContent = ev.place || "-";
+    if (scheduleDetailTypeEl) scheduleDetailTypeEl.textContent = ev.type || "기타";
+    if (scheduleDetailMemoEl) scheduleDetailMemoEl.textContent = ev.memo || "-";
+
+    openModal(scheduleDetailModalId);
+}
+
+/* 상세 모달: 수정 버튼 */
+scheduleDetailEditBtn?.addEventListener("click", () => {
+    if (!currentDetailSchedule) return;
+    const ev = mapScheduleToEvent(currentDetailSchedule);
+
+    closeModal(scheduleDetailModalId);
+    openScheduleModal(ev.date, ev);
+});
+
+/* 상세 모달: 삭제 버튼 */
+scheduleDetailDeleteBtn?.addEventListener("click", async () => {
+    if (!currentDetailScheduleId) return;
+
+    const ok = confirm("이 약속을 삭제할까요?");
+    if (!ok) return;
+
+    const targetId = currentDetailScheduleId;
+    const targetDate = selectedDateForSchedule;
+
+    try {
+        const res = await fetch(`${SCHEDULE_API}/${targetId}`, {
+            method: "DELETE",
+            headers: buildAuthHeaders(),
+        });
+
+        if (!res.ok) {
+            throw new Error(`일정 삭제 실패: ${res.status}`);
+        }
+
+        const events = loadEvents();
+        const nextEvents = events.filter(
+            (ev) => String(ev.id) !== String(targetId)
+        );
+        saveEvents(nextEvents);
+
+        renderCalendar(calendarState.year, calendarState.month);
+        renderEventList();
+
+        closeModal(scheduleDetailModalId);
+
+        // 날짜 모달이 열려 있었던 경우를 대비해, 해당 날짜 리스트 다시 갱신
+        if (targetDate) {
+            openDayEventsModal(targetDate);
+        }
+
+        addNotification?.({
+            type: "info",
+            message: "약속이 삭제되었습니다.",
+        });
+    } catch (err) {
+        console.error(err);
+        alert("일정 삭제 중 문제가 발생했습니다.");
+    }
+});
+
+/* -----------------------------------------------------
+   약속 폼 submit → 생성 / 수정 (POST / PUT)
+----------------------------------------------------- */
+
+scheduleForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const title = scheduleTitleInput.value.trim();
@@ -265,82 +552,104 @@ scheduleForm?.addEventListener("submit", (e) => {
     const place = schedulePlaceInput.value.trim();
     const memo = scheduleMemoInput.value.trim();
     const remind = scheduleRemindInput.checked;
+    const rawType = scheduleTypeInput ? scheduleTypeInput.value : "";
 
     if (!title || !date) {
-        alert("약속 제목과 날짜는 필수에요 🥺");
+        alert("약속 제목과 날짜는 필수입니다.");
         return;
     }
 
-    // 간단 타입 추론: 여행/외식
-    const lowerTitle = title.toLowerCase();
-    let type = "dinner";
-    if (lowerTitle.includes("여행") || lowerTitle.includes("trip")) type = "trip";
-
-    const events = loadEvents();
-
-    if (editingEventId) {
-        // ✏️ 기존 일정 수정
-        const idx = events.findIndex(
-            (ev) => String(ev.id) === String(editingEventId)
-        );
-        if (idx !== -1) {
-            events[idx] = {
-                ...events[idx],
-                title,
-                date,
-                time,
-                place,
-                memo,
-                type,
-                remind,
-            };
-        }
-        saveEvents(events);
-
-        addNotification({
-            type: "info",
-            message: `가족 약속 "${title}"이(가) 수정되었어요.`,
-        });
-    } else {
-        // ➕ 새 일정 추가
-        const newEvent = {
-            id: Date.now().toString(),
-            title,
-            date,
-            time,
-            place,
-            memo,
-            type,
-            remind,
-        };
-
-        events.push(newEvent);
-        saveEvents(events);
-
-        if (remind) {
-            addNotification({
-                type: "info",
-                message: `가족 약속 "${title}"이(가) 캘린더에 등록되었어요.`,
-            });
-        } else {
-            addNotification({
-                type: "info",
-                message: `가족 약속 "${title}"이(가) 저장되었어요.`,
-            });
-        }
+    // ✅ 타입 선택 강제
+    if (!rawType) {
+        alert("약속 종류를 선택해 주세요.");
+        scheduleTypeInput?.focus();
+        return;
     }
 
-    // 캘린더 & 리스트 다시 렌더
-    renderCalendar(calendarState.year, calendarState.month);
-    renderEventList();
+    const type = rawType;   // 이제 null 안 보냄, 항상 "dinner"/"trip"/"event"
 
-    closeModal(scheduleModalId);
+    const payload = {
+        title,
+        date,
+        time: time || null,
+        place: place || null,
+        memo: memo || null,
+        type,          // "dinner" / "trip" / "event"
+        remind,
+    };
+
+    const isEdit = Boolean(editingEventId);
+
+    try {
+        const url = isEdit
+            ? `${SCHEDULE_API}/${editingEventId}`
+            : SCHEDULE_API;
+
+        const res = await fetch(url, {
+            method: isEdit ? "PUT" : "POST",
+            headers: buildAuthHeaders({
+                "Content-Type": "application/json",
+            }),
+            body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+            throw new Error(
+                isEdit
+                    ? `일정 수정 실패: ${res.status}`
+                    : `일정 등록 실패: ${res.status}`
+            );
+        }
+
+        const saved = await res.json();
+        const savedEvent = mapScheduleToEvent(saved);
+
+        const events = loadEvents();
+        if (isEdit) {
+            const idx = events.findIndex(
+                (ev) => String(ev.id) === String(editingEventId)
+            );
+            if (idx !== -1) {
+                events[idx] = savedEvent;
+            } else {
+                events.push(savedEvent);
+            }
+        } else {
+            events.push(savedEvent);
+        }
+
+        saveEvents(events);
+
+        renderCalendar(calendarState.year, calendarState.month);
+        renderEventList();
+        closeModal(scheduleModalId);
+
+        editingEventId = null;
+
+        addNotification?.({
+            type: "info",
+            message: isEdit ? "약속이 수정되었습니다." : "약속이 등록되었습니다.",
+        });
+
+        // 상세 모달에서 수정한 경우를 대비해 상태 갱신
+        currentDetailScheduleId = savedEvent.id;
+        currentDetailSchedule = saved;
+
+    } catch (err) {
+        console.error(err);
+        alert(isEdit ? "일정 수정 중 오류가 발생했습니다." : "일정 등록 중 오류가 발생했습니다.");
+    }
 });
 
-/* 일정 리스트 액션 (알림 토글 / 수정 / 삭제) */
-document.addEventListener("click", (e) => {
+/* -----------------------------------------------------
+   전체 일정 리스트 액션
+   - 알림 토글
+   - 나머지 영역 클릭 → 약속 상세 모달
+----------------------------------------------------- */
+
+eventListEl?.addEventListener("click", (e) => {
     const eventItem = e.target.closest(".event-item");
-    if (!eventItem || !eventListEl) return;
+    if (!eventItem) return;
 
     const eventId = eventItem.dataset.eventId;
     if (!eventId) return;
@@ -351,61 +660,39 @@ document.addEventListener("click", (e) => {
 
     const targetEvent = events[idx];
 
-    /* 🔔 알림 토글 버튼 */
+    /* 🔔 알림 토글 버튼 (로컬 전용) */
     const remindBtn = e.target.closest(".event-remind-btn");
     if (remindBtn) {
         const newRemind = !Boolean(targetEvent.remind);
 
-        // 데이터 업데이트
         events[idx] = { ...targetEvent, remind: newRemind };
         saveEvents(events);
 
-        // 🔥 버튼에 클래스 직접 토글 (즉시 UI 반영)
         if (newRemind) {
             remindBtn.classList.add("is-remind-on");
         } else {
             remindBtn.classList.remove("is-remind-on");
         }
 
-        addNotification({
+        addNotification?.({
             type: "info",
             message: newRemind
-                ? `약속 "${targetEvent.title}" 알림을 켰어요.`
-                : `약속 "${targetEvent.title}" 알림을 껐어요.`,
+                ? `약속 "${targetEvent.title}" 알림을 켰습니다.`
+                : `약속 "${targetEvent.title}" 알림을 껐습니다.`,
         });
         return;
     }
 
-    /* ✏️ 수정 버튼 */
-    const editBtn = e.target.closest(".event-edit-btn");
-    if (editBtn) {
-        openScheduleModal(null, targetEvent);
-        return;
-    }
-
-    /* 🗑 삭제 버튼 */
-    const deleteBtn = e.target.closest(".event-delete-btn");
-    if (deleteBtn) {
-        const ok = confirm(`"${targetEvent.title}" 약속을 삭제할까요?`);
-        if (!ok) return;
-
-        const nextEvents = events.filter(
-            (ev) => String(ev.id) !== String(eventId)
-        );
-        saveEvents(nextEvents);
-
-        renderCalendar(calendarState.year, calendarState.month);
-        renderEventList();
-
-        addNotification({
-            type: "info",
-            message: `약속 "${targetEvent.title}"이(가) 삭제되었어요.`,
-        });
-        return;
-    }
+    /* ✅ 알림 버튼 이외 영역 클릭 → 약속 상세 모달 */
+    selectedDateForSchedule = targetEvent.date;
+    openScheduleDetailModal(eventId);
 });
 
-/* 캘린더 이전/다음 달 버튼 */
+
+/* -----------------------------------------------------
+   캘린더 이전/다음 달 버튼
+----------------------------------------------------- */
+
 calendarPrevBtn?.addEventListener("click", () => {
     let { year, month } = calendarState;
     month -= 1;
@@ -429,93 +716,31 @@ calendarNextBtn?.addEventListener("click", () => {
 });
 
 /* -----------------------------------------------------
-   🔐 로그인 / 회원가입 모달 탭 전환
+   헤더 네비 / 기타 버튼 UX
 ----------------------------------------------------- */
 
-const authTabs = document.querySelectorAll(".auth-tab");
-const authPanels = document.querySelectorAll(".auth-panel");
-const loginForm = document.getElementById("login-form");
-const signupForm = document.getElementById("signup-form");
-
-authTabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-        const target = tab.dataset.authTab;
-        if (!target) return;
-
-        authTabs.forEach((t) => t.classList.remove("is-active"));
-        tab.classList.add("is-active");
-
-        authPanels.forEach((panel) => {
-            if (panel.dataset.authPanel === target) {
-                panel.classList.add("is-active");
-            } else {
-                panel.classList.remove("is-active");
-            }
-        });
-    });
-});
-
-/* 로그인 / 회원가입 submit (데모용 처리) */
-loginForm?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    addNotification({
-        type: "info",
-        message: "로그인 요청이 전송되었다고 가정할게요. (백엔드 연동 자리)",
-    });
-    closeModal("modal-auth");
-});
-
-signupForm?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    addNotification({
-        type: "info",
-        message: "회원가입 정보가 저장되었다고 가정할게요. (백엔드 연동 자리)",
-    });
-    closeModal("modal-auth");
-});
-
-/* -----------------------------------------------------
-   🧭 헤더 네비 / 기타 버튼 UX
------------------------------------------------------ */
-
-/* 네비 pill active 전환만 처리 (실제로 화면 전환은 추후 SPA에서 처리) */
 document.querySelectorAll(".nav-pill").forEach((pill) => {
     pill.addEventListener("click", () => {
         document
             .querySelectorAll(".nav-pill")
             .forEach((p) => p.classList.remove("is-active"));
         pill.classList.add("is-active");
-
-        addNotification({
-            type: "info",
-            message: `"${pill.textContent.trim()}" 섹션으로 이동했다고 가정할게요.`,
-        });
     });
 });
 
-/* 초대 코드 버튼 (더미) */
 document.getElementById("open-invite")?.addEventListener("click", () => {
     const dummyCode = "DADAM-FA1234";
-    addNotification({
-        type: "info",
-        message: `가족 초대 코드 "${dummyCode}"가 생성되었다고 가정할게요.`,
-    });
-    alert(`가족 초대 코드: ${dummyCode}\n복사해서 가족에게 보내 주세요 💌`);
+    alert(`가족 초대 코드: ${dummyCode}\n복사해서 가족에게 보내 주세요.`);
 });
 
-/* 질문 아카이브 / 선택 버튼 (더미) */
 document
     .getElementById("open-question-archive")
     ?.addEventListener("click", () => {
-        addNotification({
-            type: "info",
-            message:
-                "질문 아카이브/선택 기능은 나중에 구현될 예정이에요. 지금은 디자인만 준비!",
-        });
+        alert("질문 아카이브/선택 기능은 추후 구현될 예정입니다.");
     });
 
 /* -----------------------------------------------------
-   📅 오늘 날짜 라벨 세팅 (히어로 상단)
+   오늘 날짜 라벨 세팅 (히어로 상단)
 ----------------------------------------------------- */
 
 function setTodayLabel() {
@@ -530,16 +755,14 @@ function setTodayLabel() {
 }
 
 /* -----------------------------------------------------
-   🧷 초기화
+   초기화
 ----------------------------------------------------- */
 
 document.addEventListener("DOMContentLoaded", () => {
-    // 오늘 날짜 설정
     setTodayLabel();
 
-    // 캘린더 초기값: 현재 월
     renderCalendar(calendarState.year, calendarState.month);
-
-    // 일정 리스트 렌더
     renderEventList();
+
+    syncEventsFromServer();
 });

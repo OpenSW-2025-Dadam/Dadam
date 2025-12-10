@@ -8,6 +8,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -38,9 +39,13 @@ public class Comment {
     private LocalDateTime createdAt;
 
     @PrePersist
+    @PreUpdate
     public void validateContentLength() {
         if (this.content == null || this.content.length() > MAX_COMMENT_LENGTH) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "댓글은 최대 " + MAX_COMMENT_LENGTH + "자를 초과할 수 없습니다.");
+            throw new BusinessException(
+                    ErrorCode.INVALID_REQUEST,
+                    "댓글은 최대 " + MAX_COMMENT_LENGTH + "자를 초과할 수 없습니다."
+            );
         }
     }
 
@@ -51,5 +56,11 @@ public class Comment {
         this.content = content;
         this.createdAt = LocalDateTime.now();
         validateContentLength(); // 생성 시 유효성 검사
+    }
+
+    // 댓글 내용 수정
+    public void updateContent(String content) {
+        this.content = content;
+        validateContentLength(); // 수정 시에도 유효성 검사
     }
 }

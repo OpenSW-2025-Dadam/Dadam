@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="card card-hero"
+         aria-labelledby="today-question-title"
+         th:fragment="today-question-card">
+
+    <header class="card-header">
+        <div class="card-header-left">
+            <span class="pill pill-soft">오늘의 질문</span>
+            <div class="card-title-wrap">
+                <h1 class="card-title" id="today-question-title">
+                    오늘 가족에게 던지는 한 가지 질문
+                </h1>
+                <p class="card-subtitle">
+                    모두가 한 번씩 답하면, 내일 새로운 질문이 열려요 ✨
+                </p>
+            </div>
+        </div>
+        <div class="card-header-right">
+            <div class="date-badge">
+                <span id="today-label">2025년 11월 18일</span>
+            </div>
+            <button class="ghost-icon-btn" id="open-question-archive" type="button">
+                <span class="fh-icon-calendar"></span>
+                <span>질문 선택</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="question-main">
+        <div class="question-text-wrap">
+            <p class="question-tagline">
+                오늘의 다담 주제
+            </p>
+
+            <!-- ✅ 질문 ID를 data-question-id로 바인딩 -->
+            <p
+                    class="question-text"
+                    id="today-question-text"
+                    data-question-id=""
+                    th:attr="data-question-id=${todayQuestion != null} ? ${todayQuestion.id} : null"
+                    th:text="${todayQuestion != null} ? ${todayQuestion.content} : '가족과 함께한 여행 중 가장 기억에 남는 순간은 언제였나요?'"
+            >
+                가족과 함께한 여행 중 가장 기억에 남는 순간은 언제였나요?
+            </p>
+
+            <!-- ✅ 질문 만족도 조사 UI (프론트 전용) -->
+            <div class="question-meta">
+                <div class="question-rating">
+                    <span class="chip chip-outline question-rating-label">
+                        오늘의 질문은 어땠나요?
+                    </span>
+                    <div class="question-rating-buttons" role="group" aria-label="질문 만족도 선택">
+                        <button type="button"
+                                class="chip chip-soft question-rating-btn"
+                                data-rating="good">
+                            👍 좋았어요
+                        </button>
+                        <button type="button"
+                                class="chip chip-soft question-rating-btn"
+                                data-rating="ok">
+                            🙂 괜찮았어요
+                        </button>
+                        <button type="button"
+                                class="chip chip-soft question-rating-btn"
+                                data-rating="bad">
+                            🤔 별로였어요
+                        </button>
+                    </div>
+                    <p class="question-rating-status text-soft"
+                       id="question-rating-status"
+                       aria-live="polite"></p>
+                </div>
+
+                <span class="chip chip-outline">
+                    모든 가족 답변 완료 시 다음 질문이 열립니다
+                </span>
+            </div>
+        </div>
+
+        <form class="answer-form" id="answer-form">
+            <label class="field-label" for="answer-input">
+                내 답변 적어보기
+            </label>
+            <div class="textarea-shell">
+                <textarea
+                        id="answer-input"
+                        class="textarea"
+                        rows="3"
+                        placeholder="오늘 있었던 일이나 떠오르는 기억을 편하게 적어 주세요 :)"
+                ></textarea>
+                <div class="textarea-footer">
+                    <div class="emoji-row">
+                        <button type="button" class="emoji-chip" data-emoji="😊">😊</button>
+                        <button type="button" class="emoji-chip" data-emoji="🥰">🥰</button>
+                        <button type="button" class="emoji-chip" data-emoji="🤣">🤣</button>
+                        <button type="button" class="emoji-chip" data-emoji="😢">😢</button>
+                    </div>
+                    <div class="answer-actions">
+                        <span class="length-hint" id="answer-length-hint">0 / 500</span>
+                        <button class="btn btn-primary" type="submit">
+                            답변 올리기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+</body>
+</html>

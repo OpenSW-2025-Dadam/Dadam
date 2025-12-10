@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>다담 · 가족 대화/약속 플랫폼</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Base & layout & components & widgets -->
+    <link rel="stylesheet" th:href="@{/css/familyhub.base.css}" />
+    <link rel="stylesheet" th:href="@{/css/familyhub.layout.css}" />
+    <link rel="stylesheet" th:href="@{/css/familyhub.components.css}" />
+    <link rel="stylesheet" th:href="@{/css/familyhub.widgets.css}" />
+</head>
+<body class="fh-body theme-light">
+<div class="app">
+
+    <!-- ================= HEADER ================= -->
+    <header th:replace="fragments/header :: header"></header>
+
+    <!-- ================= MAIN LAYOUT ================= -->
+    <main class="main-layout">
+        <!-- ====== MAIN COLUMN ====== -->
+        <section class="main-column">
+            <!-- 오늘의 질문 / 답변 입력 -->
+            <section th:replace="fragments/today-question :: today-question-card"></section>
+
+            <!-- 가족 답변 리스트 -->
+            <section th:replace="fragments/answers :: answers-card"></section>
+
+            <!-- 밸런스 게임 + 신조어 퀴즈 -->
+            <section th:replace="fragments/balance-quiz :: balance-quiz-row"></section>
+        </section>
+
+        <!-- ====== SIDEBAR ====== -->
+        <aside class="sidebar"
+               aria-label="가족 정보 및 일정 사이드바"
+               th:replace="fragments/sidebar :: sidebar">
+        </aside>
+    </main>
+</div>
+
+<!-- ================= MODALS ================= -->
+<div th:replace="fragments/modals :: modals"></div>
+
+<!-- ================= SCRIPTS ================= -->
+<script th:src="@{/js/dadam.core.js}"></script>
+<script th:src="@{/js/dadam.auth.js}"></script>
+<script th:src="@{/js/dadam.avatar.js}"></script>
+<script th:src="@{/js/dadam.family.js}"></script>
+<script th:src="@{/js/dadam.profile.js}"></script>
+<script th:src="@{/js/dadam.balance.js}"></script>
+<script th:src="@{/js/dadam.quiz.js}"></script>
+<script th:src="@{/js/dadam.answers.js}"></script>
+<script th:src="@{/js/dadam.ui.js}"></script>
+
+</body>
+</html>

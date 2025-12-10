@@ -8,9 +8,15 @@ import java.util.Optional;
 
 public interface QuestionRepository extends JpaRepository<Question, Long> {
 
-    // 오늘 / 특정 날짜 질문 조회
-    Optional<Question> findByQuestionDate(LocalDate questionDate);
+    /**
+     * 특정 날짜(questionDate)에 해당하는 질문 중
+     * 가장 나중에 생성된(createdAt DESC) 하나만 가져온다.
+     * (혹시라도 중복 데이터가 있어도 한 개만 반환하도록 방지 로직)
+     */
+    Optional<Question> findTopByQuestionDateOrderByCreatedAtDesc(LocalDate questionDate);
 
-    // 가장 최근에 생성된 질문
+    /**
+     * 가장 최근에 생성된 질문
+     */
     Optional<Question> findTopByOrderByCreatedAtDesc();
 }

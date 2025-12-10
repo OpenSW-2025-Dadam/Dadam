@@ -8,12 +8,15 @@ import java.time.LocalDate;
 @Getter
 @Setter
 public class ScheduleRequest {
-    // String은 null 허용 (수정 시 미전송되면 null)
-    private String appointmentName;
 
-    // LocalDate는 객체 타입이므로 null 허용
-    private LocalDate appointmentDate;
+    // ✅ 필수
+    private String title;      // 약속 이름
+    private LocalDate date;    // 날짜 (yyyy-MM-dd)
 
-    // int -> Integer로 변경하여 null 허용 (수정 시 미전송되면 null)
-    private Integer iconType;
+    // ✅ 선택 (비어 있어도 / null이어도 됨)
+    private String time;       // "18:30" 같은 문자열
+    private String place;      // 장소
+    private String memo;       // 메모
+    private String type;       // "trip" / "dinner" 등 (없으면 null)
+    private Boolean remind;    // 알림 여부 (null이면 false로 처리)
 }

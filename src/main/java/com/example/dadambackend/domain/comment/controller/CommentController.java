@@ -42,5 +42,32 @@ public class CommentController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    // TODO: 댓글 수정 및 삭제 기능은 이후에 추가 가능
+    /**
+     * PUT /api/v1/answers/{answerId}/comments/{commentId}
+     * 특정 댓글 수정
+     */
+    @PutMapping("/{commentId}")
+    public ResponseEntity<Void> updateComment(
+            @PathVariable Long answerId,
+            @PathVariable Long commentId,
+            @RequestBody CommentRequest request) {
+
+        commentService.updateComment(answerId, commentId, request);
+        // 204 No Content
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * DELETE /api/v1/answers/{answerId}/comments/{commentId}
+     * 특정 댓글 삭제
+     */
+    @DeleteMapping("/{commentId}")
+    public ResponseEntity<Void> deleteComment(
+            @PathVariable Long answerId,
+            @PathVariable Long commentId) {
+
+        commentService.deleteComment(answerId, commentId);
+        // 204 No Content
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -1,11 +1,14 @@
 package com.example.dadambackend.common.ai;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 @Component
@@ -16,24 +19,24 @@ public class AiClient {
     private String apiKey;
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // 🔹 OpenAI Chat Completions API URL
     private static final String AI_API_URL = "https://api.openai.com/v1/chat/completions";
 
-    /**
-     * GPT에게 system + user 프롬프트를 보내고,
-     * 응답 message.content 문자열을 그대로 반환한다.
-     * (서비스 쪽에서 이 문자열을 JSON이라고 가정하고 파싱)
-     * 실패하면 QuestionGenerationResult 형식의 fallback JSON을 반환한다.
-     */
     public String request(String systemPrompt, String userPrompt) {
         try {
-            // 1. 헤더 설정
+            // 1. API 키 체크
+            if (apiKey == null || apiKey.isBlank()) {
+                System.out.println("[AiClient] ai.api.key 설정이 비어 있습니다. application.yml 또는 환경 변수를 확인하세요.");
+                return buildFallbackJson();
+            }
+
+            // 2. 헤더
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBearerAuth(apiKey);
 
-            // 2. 요청 바디 구성 (Chat Completions 형식)
+            // 3. 메시지 구성
             OpenAiMessage systemMsg = new OpenAiMessage();
             systemMsg.setRole("system");
             systemMsg.setContent(systemPrompt);
@@ -46,69 +49,94 @@ public class AiClient {
             body.setModel("gpt-4o-mini");
             body.setMessages(new OpenAiMessage[]{systemMsg, userMsg});
 
+            // 4. 응답 포맷: JSON 오브젝트 강제
+            OpenAiRequest.ResponseFormat responseFormat = new OpenAiRequest.ResponseFormat();
+            responseFormat.setType("json_object");
+            body.setResponse_format(responseFormat);
+
             HttpEntity<OpenAiRequest> entity = new HttpEntity<>(body, headers);
 
-            // 3. OpenAI 호출
-            ResponseEntity<OpenAiResponse> response =
-                    restTemplate.postForEntity(AI_API_URL, entity, OpenAiResponse.class);
+            // 5. OpenAI 호출
+            ResponseEntity<String> response =
+                    restTemplate.exchange(AI_API_URL, HttpMethod.POST, entity, String.class);
 
-            OpenAiResponse aiResponse = response.getBody();
-            if (aiResponse == null) {
-                System.out.println("[AiClient] 응답 바디가 null, fallback 사용");
+            System.out.println("[AiClient] status = " + response.getStatusCodeValue());
+            System.out.println("[AiClient] body   = " + response.getBody());
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                System.out.println("[AiClient] OpenAI HTTP 에러 → " + response.getStatusCode());
                 return buildFallbackJson();
             }
+
+            // 6. JSON 파싱 (알 수 없는 필드는 모두 무시)
+            OpenAiResponse aiResponse =
+                    objectMapper.readValue(response.getBody(), OpenAiResponse.class);
 
             String content = aiResponse.getContentText();
             if (content == null || content.isBlank()) {
-                System.out.println("[AiClient] GPT 내용이 비어있음, fallback 사용");
+                System.out.println("[AiClient] GPT content 비어 있음 → fallback 사용");
                 return buildFallbackJson();
             }
 
-            // ✅ 서비스 쪽에서 이 content를 JSON이라고 가정하고 파싱함
             return content;
 
+        } catch (HttpStatusCodeException e) {
+            System.out.println("[AiClient] HTTP 예외 발생 → status: " + e.getStatusCode());
+            System.out.println("[AiClient] response body: " + e.getResponseBodyAsString());
+            return buildFallbackJson();
         } catch (Exception e) {
-            // 여기서 예외가 나면 항상 fallback으로 감
-            System.out.println("[AiClient] GPT 호출 실패 → fallback 사용: " + e.getMessage());
+            System.out.println("[AiClient] GPT 호출 실패 → fallback 사용");
+            e.printStackTrace();
             return buildFallbackJson();
         }
     }
 
-    /**
-     * (옵션) 예전처럼 prompt 하나만 받는 버전도 유지해 둠.
-     * 공통 systemPrompt를 쓰고 싶은 경우에 사용 가능.
-     */
     public String request(String prompt) {
         String systemPrompt = "너는 사용자의 요청에 맞는 JSON을 생성하는 어시스턴트야. " +
                 "사용자가 요구한 형식 그대로 JSON만 출력해라.";
         return request(systemPrompt, prompt);
     }
 
-    // ================== OpenAI 요청 DTO ==================
-
     @Data
     @NoArgsConstructor
     private static class OpenAiRequest {
         private String model;
         private OpenAiMessage[] messages;
+        private ResponseFormat response_format;
+
+        @Data
+        @NoArgsConstructor
+        public static class ResponseFormat {
+            private String type;
+        }
     }
 
+    /**
+     * OpenAI의 message 형식
+     * - role, content만 사용하고
+     * - refusal, annotations 등 나머지는 전부 무시
+     */
     @Data
     @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private static class OpenAiMessage {
-        private String role;    // "system", "user", "assistant"
+        private String role;
         private String content;
     }
 
-    // ================== OpenAI 응답 DTO ==================
-
+    /**
+     * OpenAI chat/completions 응답 DTO
+     * - choices 배열만 사용하고 나머지 필드는 전부 무시
+     */
     @Data
     @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private static class OpenAiResponse {
         private Choice[] choices;
 
         @Data
         @NoArgsConstructor
+        @JsonIgnoreProperties(ignoreUnknown = true)
         public static class Choice {
             private OpenAiMessage message;
         }
@@ -116,7 +144,7 @@ public class AiClient {
         public String getContentText() {
             try {
                 if (choices == null || choices.length == 0) return null;
-                OpenAiMessage msg = choices[0].message;
+                OpenAiMessage msg = choices[0].getMessage();
                 if (msg == null) return null;
                 return msg.getContent();
             } catch (Exception e) {
@@ -125,11 +153,8 @@ public class AiClient {
         }
     }
 
-    // ================== Fallback & 유틸 ==================
-
     /**
-     * 질문 생성용 기본 fallback JSON
-     * (QuestionGenerationResult 형태와 맞춤)
+     * Question 용 기본 fallback JSON
      */
     private String buildFallbackJson() {
         return """

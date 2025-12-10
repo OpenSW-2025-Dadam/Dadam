@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="modals">
+
+    <!-- 🔔 알림 모달 -->
+    <div id="modal-notifications" class="modal-backdrop">
+        <div class="modal">
+            <header class="modal-header">
+                <h2 class="modal-title">알림</h2>
+                <button class="ghost-icon-btn" type="button" data-close-modal="modal-notifications">
+                    <span class="fh-icon-close"></span>
+                </button>
+            </header>
+            <div class="modal-body">
+                <ul class="notification-list" id="notification-list">
+                    <!-- dadam.core.js 에서 렌더링 -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 👤 프로필 / 마이페이지 모달 -->
+    <div id="modal-profile" class="modal-backdrop">
+        <div class="modal">
+            <header class="modal-header">
+                <h2 class="modal-title">프로필 설정</h2>
+                <button class="ghost-icon-btn" type="button" data-close-modal="modal-profile">
+                    <span class="fh-icon-close"></span>
+                </button>
+            </header>
+            <div class="modal-body">
+                <form id="profile-form">
+                    <div class="profile-avatar-section">
+                        <!-- ✅ JS에서 사용하는 아바타 프리뷰 -->
+                        <div class="avatar avatar-lg avatar-soft" id="profile-avatar-preview">
+                            <span class="avatar-initial">나</span>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label" for="profile-name-input">이름</label>
+                        <input id="profile-name-input"
+                               class="input"
+                               type="text"
+                               placeholder="이름을 입력하세요" />
+                    </div>
+
+                    <div class="field-group">
+                        <label class="field-label" for="profile-role-input">역할</label>
+                        <select id="profile-role-input" class="select">
+                            <option value="child">자녀</option>
+                            <option value="parent">부모</option>
+                            <option value="grandparent">조부모</option>
+                        </select>
+                    </div>
+
+                    <!-- 👨‍👩‍👧 가족 코드 입력 영역 -->
+                    <div class="field-group">
+                        <label class="field-label" for="family-code-input">가족 코드</label>
+                        <div class="field-row">
+                            <input
+                                    id="family-code-input"
+                                    class="input"
+                                    type="text"
+                                    placeholder="초대받은 가족 코드를 입력하세요"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="btn btn-ghost" type="button" data-close-modal="modal-profile">닫기</button>
+                        <button class="btn btn-ghost" type="button" id="logout-btn">로그아웃</button>
+                        <button class="btn btn-primary" type="submit">저장</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔐 로그인 / 회원가입 모달 -->
+    <div id="modal-auth" class="modal-backdrop">
+        <div class="modal">
+            <header class="modal-header">
+                <h2 class="modal-title">로그인</h2>
+                <button class="ghost-icon-btn" type="button" data-close-modal="modal-auth">
+                    <span class="fh-icon-close"></span>
+                </button>
+            </header>
+
+            <div class="modal-body">
+                <!-- 탭 -->
+                <div class="auth-tabs">
+                    <button class="auth-tab is-active" type="button" data-auth-tab="login">로그인</button>
+                    <button class="auth-tab" type="button" data-auth-tab="signup">회원가입</button>
+                </div>
+
+                <!-- 로그인 패널 -->
+                <section class="auth-panel is-active" data-auth-panel="login">
+                    <form id="login-form">
+                        <div class="field-group">
+                            <label class="field-label" for="login-email">이메일</label>
+                            <input id="login-email" class="input" type="email" name="email" required />
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" for="login-password">비밀번호</label>
+                            <input id="login-password" class="input" type="password" name="password" required />
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-ghost" type="button" data-close-modal="modal-auth">취소</button>
+                            <button class="btn btn-primary" type="submit">로그인</button>
+                        </div>
+                    </form>
+
+                    <p class="auth-helper-text">
+                        계정이 아직 없으신가요?
+                        <button type="button" class="link-button" id="go-signup-link">회원가입</button>
+                    </p>
+                </section>
+
+                <!-- 회원가입 패널 -->
+                <section class="auth-panel" data-auth-panel="signup">
+                    <form id="signup-form">
+                        <div class="field-group">
+                            <label class="field-label" for="signup-name">이름</label>
+                            <input id="signup-name" class="input" type="text" name="name" required />
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" for="signup-email">이메일</label>
+                            <input id="signup-email" class="input" type="email" name="email" required />
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" for="signup-password">비밀번호</label>
+                            <input id="signup-password" class="input" type="password" name="password" required />
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-ghost" type="button" data-close-modal="modal-auth">취소</button>
+                            <button class="btn btn-primary" type="submit">회원가입</button>
+                        </div>
+                    </form>
+
+                    <p class="auth-helper-text">
+                        이미 계정이 있으신가요?
+                        <button type="button" class="link-button" id="go-login-link">로그인</button>
+                    </p>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📅 약속 만들기 모달 -->
+    <div id="modal-schedule" class="modal-backdrop">
+        <div class="modal">
+            <header class="modal-header">
+                <h2 class="modal-title">가족 약속 만들기</h2>
+                <button class="ghost-icon-btn" type="button" data-close-modal="modal-schedule">
+                    <span class="fh-icon-close"></span>
+                </button>
+            </header>
+
+            <div class="modal-body">
+                <form id="schedule-form">
+                    <!-- ✅ title: 필수 -->
+                    <div class="field-group">
+                        <label class="field-label" for="schedule-title">약속 이름</label>
+                        <input
+                                id="schedule-title"
+                                name="title"
+                                class="input"
+                                type="text"
+                                placeholder="예: 토요일 가족 외식"
+                                required
+                        />
+                    </div>
+
+                    <div class="field-group field-row">
+                        <!-- ✅ date: 필수 -->
+                        <div class="field-col">
+                            <label class="field-label" for="schedule-date">날짜</label>
+                            <input
+                                    id="schedule-date"
+                                    name="date"
+                                    class="input"
+                                    type="date"
+                                    required
+                            />
+                        </div>
+
+                        <!-- ⭕ time: 선택 -->
+                        <div class="field-col">
+                            <label class="field-label" for="schedule-time">시간</label>
+                            <input
+                                    id="schedule-time"
+                                    name="time"
+                                    class="input"
+                                    type="time"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- ⭕ place: 선택 -->
+                    <div class="field-group">
+                        <label class="field-label" for="schedule-place">장소</label>
+                        <input
+                                id="schedule-place"
+                                name="place"
+                                class="input"
+                                type="text"
+                                placeholder="예: 집 앞 식당"
+                        />
+                    </div>
+
+                    <!-- ⭕ memo: 선택 -->
+                    <div class="field-group">
+                        <label class="field-label" for="schedule-memo">메모</label>
+                        <textarea
+                                id="schedule-memo"
+                                name="memo"
+                                class="textarea"
+                                rows="3"
+                                placeholder="약속에 대한 추가 메모를 적어 주세요."
+                        ></textarea>
+                    </div>
+
+                    <!-- ⭕ type: 사용자가 직접 선택 -->
+                    <div class="field-group">
+                        <label class="field-label" for="schedule-type">약속 종류</label>
+                        <select
+                                id="schedule-type"
+                                name="type"
+                                class="select"
+                        >
+                            <option value="" selected>약속 종류를 선택해 주세요.</option>
+                            <option value="dinner">식사</option>
+                            <option value="trip">여행</option>
+                            <option value="event">기타</option>
+                        </select>
+                    </div>
+
+                    <!-- ⭕ remind: 선택(체크/해제) -->
+                    <div class="field-group">
+                        <label class="checkbox">
+                            <input
+                                    id="schedule-remind"
+                                    name="remind"
+                                    type="checkbox"
+                                    checked
+                            />
+                            <span>약속 전에 알림 받기</span>
+                        </label>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="btn btn-ghost" type="button" data-close-modal="modal-schedule">취소</button>
+                        <button class="btn btn-primary" type="submit">등록</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📅 날짜별 약속 리스트 모달 -->
+    <div id="modal-day-events" class="modal-backdrop">
+        <div class="modal">
+            <header class="modal-header">
+                <h2 class="modal-title">
+                    <span id="day-events-date-label">2025년 12월 10일</span>의 약속
+                </h2>
+                <button class="ghost-icon-btn" type="button" data-close-modal="modal-day-events">
+                    <span class="fh-icon-close"></span>
+                </button>
+            </header>
+            <div class="modal-body">
+                <div id="day-events-list">
+                    <!-- dadam.ui.js에서 해당 날짜의 약속 리스트 렌더링 -->
+                </div>
+            </div>
+            <footer class="modal-footer">
+                <button class="btn btn-primary" type="button" id="day-events-create-btn">
+                    이 날짜에 새 약속 만들기
+                </button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- 📌 약속 상세 모달 -->
+    <div id="modal-schedule-detail" class="modal-backdrop">
+        <div class="modal">
+            <header class="modal-header">
+                <h2 class="modal-title" id="schedule-detail-title">약속 상세</h2>
+                <button class="ghost-icon-btn" type="button" data-close-modal="modal-schedule-detail">
+                    <span class="fh-icon-close"></span>
+                </button>
+            </header>
+            <div class="modal-body">
+                <div class="field-group">
+                    <p><strong>날짜</strong> : <span id="schedule-detail-date"></span></p>
+                </div>
+                <div class="field-group">
+                    <p><strong>시간</strong> : <span id="schedule-detail-time"></span></p>
+                </div>
+                <div class="field-group">
+                    <p><strong>장소</strong> : <span id="schedule-detail-place"></span></p>
+                </div>
+                <div class="field-group">
+                    <p><strong>종류</strong> : <span id="schedule-detail-type"></span></p>
+                </div>
+                <div class="field-group">
+                    <p><strong>메모</strong> : <span id="schedule-detail-memo"></span></p>
+                </div>
+            </div>
+            <footer class="modal-footer">
+                <button class="btn btn-ghost" type="button" id="schedule-detail-edit-btn">수정하기</button>
+                <button class="btn btn-danger" type="button" id="schedule-detail-delete-btn">삭제하기</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ✅ 답변 상세 + 댓글 모달 -->
+    <div id="modal-answer-thread" class="modal-backdrop">
+        <div class="modal">
+            <header class="modal-header">
+                <h2 class="modal-title">가족 답변</h2>
+                <button class="ghost-icon-btn" type="button" data-close-modal="modal-answer-thread">
+                    <span class="fh-icon-close"></span>
+                </button>
+            </header>
+            <div class="modal-body">
+                <div id="answer-thread-main"></div>
+                <div class="answer-thread-actions" id="answer-thread-actions"
+                     style="margin-top:12px; gap:8px; display:flex; justify-content:flex-end;">
+                    <button class="btn btn-ghost btn-sm" type="button" id="answer-edit-btn">수정</button>
+                    <button class="btn btn-ghost btn-sm" type="button" id="answer-edit-cancel-btn" style="display:none;">수정 취소</button>
+                    <button class="btn btn-danger btn-sm" type="button" id="answer-delete-btn">삭제</button>
+                </div>
+                <hr />
+                <ul class="comment-list" id="comment-list"></ul>
+
+                <form id="comment-form" class="comment-form">
+                    <div class="field-group">
+                        <label class="field-label" for="comment-input">댓글 남기기</label>
+                        <textarea id="comment-input" class="textarea" rows="2" placeholder="가족에게 따뜻한 한 마디를 남겨 보세요."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" type="submit">댓글 등록</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

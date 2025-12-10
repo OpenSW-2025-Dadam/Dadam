@@ -30,57 +30,75 @@ public class ScheduleService {
      */
     @Transactional
     public ScheduleResponse createSchedule(ScheduleRequest request) {
-        // DTO에서 받은 Integer 타입을 int로 변환 (null이 아닌 것이 보장되어야 함 - 등록 시에는 모든 필드가 필수)
-        Schedule schedule = new Schedule(
-                request.getAppointmentName(),
-                request.getAppointmentDate(),
-                request.getIconType() // 등록 시에는 null이면 안 되지만, 편의를 위해 Service에서 Integer 처리하지 않음
-        );
-        Schedule savedSchedule = scheduleRepository.save(schedule);
-        return ScheduleResponse.from(savedSchedule, isUpcoming(savedSchedule.getAppointmentDate()));
+
+        // 필수값 검증 (프론트에서 막아주지만, 백엔드에서도 한 번 더)
+        if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "약속 이름(title)은 필수입니다.");
+        }
+        if (request.getDate() == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "약속 날짜(date)는 필수입니다.");
+        }
+
+        Schedule schedule = Schedule.create(request);
+        Schedule saved = scheduleRepository.save(schedule);
+
+        return ScheduleResponse.from(saved, isUpcoming(saved.getDate()));
     }
 
     /**
-     * 일정 상세 조회 (수정 팝업에 기존 데이터 채우기 위함)
+     * 일정 상세 조회 (수정용)
      */
     public ScheduleUpdateResponse getScheduleForUpdate(Long scheduleId) {
         Schedule schedule = scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_FOUND, "수정하려는 일정을 찾을 수 없습니다."));
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.GAME_NOT_FOUND, "수정하려는 일정을 찾을 수 없습니다."));
 
         return ScheduleUpdateResponse.from(schedule);
     }
 
     /**
-     * 일정 수정 로직 (핵심 수정)
+     * 일정 수정
      */
     @Transactional
     public ScheduleResponse updateSchedule(Long scheduleId, ScheduleRequest request) {
         Schedule schedule = scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_FOUND, "수정하려는 일정을 찾을 수 없습니다."));
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.GAME_NOT_FOUND, "수정하려는 일정을 찾을 수 없습니다."));
 
-        // 기존 값 유지 로직
-        // request의 값이 null이면 기존 값을 사용하고, 아니면 request 값을 사용
-        String newName = request.getAppointmentName() != null ? request.getAppointmentName() : schedule.getAppointmentName();
-        LocalDate newDate = request.getAppointmentDate() != null ? request.getAppointmentDate() : schedule.getAppointmentDate();
-        Integer newIconType = request.getIconType() != null ? request.getIconType() : schedule.getIconType(); // ⭐ Integer로 받도록 처리
+        schedule.update(request);
 
-        // Schedule 엔티티의 update 메서드를 호출하여 수정
-        schedule.update(newName, newDate, newIconType);
-
-        return ScheduleResponse.from(schedule, isUpcoming(schedule.getAppointmentDate()));
+        return ScheduleResponse.from(schedule, isUpcoming(schedule.getDate()));
     }
 
     /**
-     * 다가오는 일정 목록 조회
+     * 다가오는 일정 목록 조회 (오늘부터 30일)
      */
     public List<ScheduleResponse> getUpcomingSchedules() {
         LocalDate today = LocalDate.now();
-        LocalDate maxDate = today.plusDays(UPCOMING_DAYS);
+        LocalDate end = today.plusDays(UPCOMING_DAYS);
 
-        List<Schedule> schedules = scheduleRepository.findByAppointmentDateBetweenOrderByAppointmentDateAsc(today, maxDate);
+        List<Schedule> schedules =
+                scheduleRepository.findByDateBetweenOrderByDateAsc(today, end);
 
         return schedules.stream()
-                .map(schedule -> ScheduleResponse.from(schedule, true))
+                .map(s -> ScheduleResponse.from(s, true))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * ✅ NEW
+     * 특정 날짜의 일정 목록 조회
+     *
+     * - date가 null 이면 오늘(LocalDate.now()) 기준으로 조회
+     * - 리턴은 ScheduleResponse 리스트
+     */
+    public List<ScheduleResponse> getSchedulesByDate(LocalDate date) {
+        LocalDate targetDate = (date != null) ? date : LocalDate.now();
+
+        List<Schedule> schedules = scheduleRepository.findByDate(targetDate);
+
+        return schedules.stream()
+                .map(s -> ScheduleResponse.from(s, isUpcoming(s.getDate())))
                 .collect(Collectors.toList());
     }
 
@@ -96,7 +114,7 @@ public class ScheduleService {
     }
 
     private boolean isUpcoming(LocalDate date) {
-        long daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), date);
-        return daysUntil >= 0 && daysUntil <= UPCOMING_DAYS;
+        long diff = ChronoUnit.DAYS.between(LocalDate.now(), date);
+        return diff >= 0 && diff <= UPCOMING_DAYS;
     }
 }
