@@ -190,12 +190,12 @@ function buildFamilyCellHtml(member) {
 ----------------------------------------------------- */
 function buildFamilyAddCellHtml() {
     return `
-      <button class="family-cell family-add" id="family-add-btn" type="button">
-        <span class="avatar avatar-md avatar-dashed">
-          <span class="fh-icon-plus"></span>
-        </span>
-        <span class="family-name">추가</span>
-      </button>
+<!--      <button class="family-cell family-add" id="family-add-btn" type="button">-->
+<!--        <span class="avatar avatar-md avatar-dashed">-->
+<!--          <span class="fh-icon-plus"></span>-->
+<!--        </span>-->
+<!--        <span class="family-name">추가</span>-->
+<!--      </button>-->
     `;
 }
 
