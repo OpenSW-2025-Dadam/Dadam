@@ -22,6 +22,11 @@ const signupNameInput = document.getElementById("signup-name");
 const signupEmailInput = document.getElementById("signup-email");
 const signupPasswordInput = document.getElementById("signup-password");
 
+const introLoginBtn = document.getElementById("intro-login-btn");
+const introSignupBtn = document.getElementById("intro-signup-btn");
+const loginCancelBtn = document.getElementById("login-cancel-btn");
+const signupCancelBtn = document.getElementById("signup-cancel-btn");
+
 // 로그인/회원가입 패널 이동 링크
 const goSignupLink = document.getElementById("go-signup-link");
 const goLoginLink = document.getElementById("go-login-link");
@@ -75,6 +80,35 @@ goLoginLink?.addEventListener("click", () => {
     setAuthMode("login");
 });
 
+introLoginBtn?.addEventListener("click", () => {
+    if (typeof closeModal === "function") {
+        closeModal("modal-intro");
+    }
+    openModal("modal-login");
+});
+
+introSignupBtn?.addEventListener("click", () => {
+    if (typeof closeModal === "function") {
+        closeModal("modal-intro");
+    }
+    setAuthMode("signup");
+    openModal("modal-signup");
+});
+
+loginCancelBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (typeof showIntroModal === "function") {
+        showIntroModal();
+    }
+});
+
+signupCancelBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (typeof showIntroModal === "function") {
+        showIntroModal();
+    }
+});
+
 /* -----------------------------------------------------
    공통: 로그인 성공/회원가입 성공 후 처리
 ----------------------------------------------------- */
@@ -104,7 +138,9 @@ function handleAuthSuccess(data, message) {
 
         // 4) 로그인 모달 닫기
         if (typeof closeModal === "function") {
-            closeModal("modal-auth");
+            closeModal("modal-login");
+            closeModal("modal-signup");
+            closeModal("modal-intro");
         }
 
         // 4-1) ✅ 로그인/회원가입 성공 후 퀴즈 상태 리셋
@@ -118,6 +154,10 @@ function handleAuthSuccess(data, message) {
                 type: "info",
                 message: message || "로그인에 성공했어요.",
             });
+        }
+
+        if (typeof fetchAndRenderFamilyMembers === "function") {
+            fetchAndRenderFamilyMembers();
         }
     } catch (err) {
         console.error("[AUTH] handleAuthSuccess error:", err);

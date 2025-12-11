@@ -6,6 +6,17 @@
 
 const FAMILY_MEMBERS_API_URL = "/api/v1/users/family";
 const familyGridEl = document.getElementById("family-grid");
+const inviteCodeInput = document.getElementById("invite-code-value");
+const inviteFamilyListEl = document.getElementById("invite-family-list");
+const inviteFamilyCountEl = document.getElementById("invite-family-count");
+const familyProfileModal = document.getElementById("modal-family-profile");
+const familyProfileNameEl = document.getElementById("family-profile-name");
+const familyProfileRoleEl = document.getElementById("family-profile-role");
+const familyProfileEmailEl = document.getElementById("family-profile-email");
+const familyProfileCodeEl = document.getElementById("family-profile-code");
+const familyProfileAvatarEl = document.getElementById("family-profile-avatar");
+
+let latestFamilyMembers = [];
 
 /* -----------------------------------------------------
    🔹 공통 API GET (Bearer 토큰 포함)
@@ -32,6 +43,33 @@ async function familyApiGet(url) {
     if (!res.ok) {
         const text = await res.text().catch(() => "");
         throw new Error(`GET ${url} 실패: ${text}`);
+    }
+
+    return res.json();
+}
+
+async function familyApiPost(url) {
+    const token = localStorage.getItem("dadam_auth_token");
+
+    const res = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+        },
+    });
+
+    if (res.status === 401) {
+        addNotification?.({
+            type: "error",
+            message: "로그인이 필요합니다.",
+        });
+        throw new Error("401 Unauthorized");
+    }
+
+    if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`POST ${url} 실패: ${text}`);
     }
 
     return res.json();
@@ -81,6 +119,29 @@ function normalizeFamilyMembers(rawList) {
             isMe,
         };
     });
+}
+
+function syncFamilyGlobals(members) {
+    latestFamilyMembers = members;
+
+    const map = {};
+    members.forEach((m) => {
+        if (m.userId == null) return;
+        map[String(m.userId)] = {
+            name: m.displayName,
+            avatarUrl: m.avatarUrl,
+            familyRole: m.familyRole,
+            email: m.email,
+            familyCode: m.familyCode,
+        };
+    });
+
+    window.DADAM_FAMILY = map;
+    window.DADAM_FAMILY_COUNT = members.length;
+
+    if (typeof window.refreshAnswerProgressWithCurrentFamily === "function") {
+        window.refreshAnswerProgressWithCurrentFamily();
+    }
 }
 
 /* -----------------------------------------------------
@@ -145,6 +206,12 @@ function renderFamilyGrid(members) {
     document.getElementById("family-add-btn")?.addEventListener("click", () => {
         document.getElementById("open-invite")?.click();
     });
+
+    familyGridEl.querySelectorAll(".family-cell").forEach((btn) => {
+        const userId = btn.dataset.userId;
+        if (!userId || btn.classList.contains("family-add")) return;
+        btn.addEventListener("click", () => openFamilyProfile(userId));
+    });
 }
 
 /* -----------------------------------------------------
@@ -155,6 +222,7 @@ async function fetchAndRenderFamilyMembers() {
         const raw = await familyApiGet(FAMILY_MEMBERS_API_URL);
         const members = normalizeFamilyMembers(raw);
 
+        syncFamilyGlobals(members);
         renderFamilyGrid(members);
     } catch (e) {
         console.error("[FAMILY] load error:", e);
@@ -168,6 +236,132 @@ async function fetchAndRenderFamilyMembers() {
         renderFamilyGrid([]);
     }
 }
+
+window.fetchAndRenderFamilyMembers = fetchAndRenderFamilyMembers;
+
+/* -----------------------------------------------------
+   🔹 초대 모달 렌더링
+----------------------------------------------------- */
+function renderInviteFamilyMembers(members) {
+    if (!inviteFamilyListEl) return;
+
+    const cellsHtml = members.map(buildFamilyCellHtml).join("");
+    inviteFamilyListEl.innerHTML = cellsHtml ||
+        `<div class="empty-placeholder">아직 가족이 없어요. 초대 코드를 공유해 보세요!</div>`;
+
+    if (inviteFamilyCountEl) {
+        const count = members.length;
+        inviteFamilyCountEl.textContent =
+            count > 0 ? `${count}명` : "구성원 없음";
+    }
+
+    inviteFamilyListEl.querySelectorAll(".family-cell").forEach((btn) => {
+        const userId = btn.dataset.userId;
+        if (!userId || btn.classList.contains("family-add")) return;
+        btn.addEventListener("click", () => openFamilyProfile(userId));
+    });
+}
+
+async function openFamilyInviteModal() {
+    try {
+        const [codeResp, familyRaw] = await Promise.all([
+            familyApiPost("/api/v1/users/me/family-code"),
+            familyApiGet(FAMILY_MEMBERS_API_URL),
+        ]);
+
+        const members = normalizeFamilyMembers(familyRaw);
+        syncFamilyGlobals(members);
+
+        if (inviteCodeInput) {
+            inviteCodeInput.value = codeResp.familyCode || "";
+        }
+
+        renderInviteFamilyMembers(members);
+
+        if (typeof openModal === "function") {
+            openModal("modal-invite");
+        }
+    } catch (e) {
+        console.error("[FAMILY] invite modal error:", e);
+        addNotification?.({
+            type: "error",
+            message: "초대 코드를 불러오지 못했습니다. 로그인 상태를 확인해 주세요.",
+        });
+    }
+}
+
+window.openFamilyInviteModal = openFamilyInviteModal;
+
+function openFamilyProfile(userId) {
+    if (!familyProfileModal) return;
+
+    const member = latestFamilyMembers.find(
+        (m) => String(m.userId) === String(userId)
+    );
+
+    if (!member) return;
+
+    if (familyProfileNameEl) {
+        familyProfileNameEl.textContent = member.displayName;
+    }
+    if (familyProfileRoleEl) {
+        familyProfileRoleEl.textContent = getFamilyRoleLabel(
+            member.familyRole,
+            member.isMe
+        );
+    }
+    if (familyProfileEmailEl) {
+        familyProfileEmailEl.textContent = member.email || "-";
+    }
+    if (familyProfileCodeEl) {
+        familyProfileCodeEl.textContent = member.familyCode || "-";
+    }
+
+    if (familyProfileAvatarEl) {
+        const avatarHtml =
+            typeof buildAvatarHtml === "function"
+                ? buildAvatarHtml({
+                      userId: member.userId,
+                      userName: member.displayName,
+                      avatarUrl: member.avatarUrl,
+                      size: "lg",
+                      variant: member.isMe ? "accent" : "soft",
+                  })
+                : `<div class="avatar avatar-lg avatar-soft">
+                        <span class="avatar-initial">${getAvatarLabel(member.displayName)}</span>
+                    </div>`;
+        familyProfileAvatarEl.innerHTML = avatarHtml;
+    }
+
+    if (typeof openModal === "function") {
+        openModal("modal-family-profile");
+    }
+}
+
+document.getElementById("copy-invite-code")?.addEventListener("click", async () => {
+    const code = inviteCodeInput?.value?.trim();
+    if (!code) {
+        addNotification?.({
+            type: "warning",
+            message: "발급된 초대 코드가 없습니다.",
+        });
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(code);
+        addNotification?.({
+            type: "info",
+            message: "초대 코드를 복사했어요!",
+        });
+    } catch (err) {
+        console.error("[FAMILY] copy failed", err);
+        addNotification?.({
+            type: "error",
+            message: "코드를 복사하지 못했습니다. 브라우저 권한을 확인해 주세요.",
+        });
+    }
+});
 
 /* -----------------------------------------------------
    🔹 페이지 로딩 시 자동 실행
