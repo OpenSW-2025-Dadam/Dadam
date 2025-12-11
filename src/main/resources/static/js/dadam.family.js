@@ -10,6 +10,10 @@ const inviteCodeInput = document.getElementById("invite-code-value");
 const inviteFamilyListEl = document.getElementById("invite-family-list");
 const inviteFamilyCountEl = document.getElementById("invite-family-count");
 
+function normalizeFamilyCode(value) {
+    return (value ?? "").toString().trim();
+}
+
 /* -----------------------------------------------------
    🔹 공통 API GET (Bearer 토큰 포함)
 ----------------------------------------------------- */
@@ -106,7 +110,7 @@ function normalizeFamilyMembers(rawList) {
             email: raw.email,
             displayName: raw.name || "가족",
             familyRole: raw.familyRole || "member",
-            familyCode: raw.familyCode,
+            familyCode: normalizeFamilyCode(raw.familyCode),
             avatarUrl: raw.avatarUrl,
             isMe,
         };
@@ -116,10 +120,12 @@ function normalizeFamilyMembers(rawList) {
 function filterMembersByMyFamilyCode(members) {
     if (!Array.isArray(members) || members.length === 0) return [];
 
-    const myCode = (currentUser && currentUser.familyCode) || "";
+    const myCode = normalizeFamilyCode((currentUser && currentUser.familyCode) || "");
     if (!myCode) return members;
 
-    const filtered = members.filter((m) => (m.familyCode || "") === myCode);
+    const filtered = members.filter(
+        (m) => normalizeFamilyCode(m.familyCode) === myCode
+    );
     return filtered.length > 0 ? filtered : members;
 }
 

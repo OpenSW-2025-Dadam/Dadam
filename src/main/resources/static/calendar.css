@@ -64,6 +64,13 @@
     transform: translateY(-1px);
 }
 
+.calendar-cell.is-selected {
+    border-color: var(--matcha-main);
+    background: linear-gradient(135deg, #f4f8f3 0%, #ecf5e8 100%);
+    box-shadow: 0 6px 16px rgba(58, 120, 66, 0.14);
+    transform: translateY(-1px);
+}
+
 /* 오늘 날짜 */
 .calendar-cell.today {
     border-color: var(--matcha-dark);

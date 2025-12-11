@@ -18,6 +18,10 @@ const profileAvatarPreview = document.getElementById("profile-avatar-preview");
 const headerAvatar = document.getElementById("current-avatar");
 const headerUsername = document.getElementById("current-username");
 
+function normalizeFamilyCode(value) {
+    return (value ?? "").toString().trim();
+}
+
 /* -----------------------------------------------------
    내부 헬퍼: currentUser에서 이름/아바타 URL 추출
 ----------------------------------------------------- */
@@ -128,11 +132,14 @@ async function fetchProfile() {
         profileRoleInput.value = currentUser?.familyRole || "child";
     }
     if (profileFamilyCodeInput) {
-        profileFamilyCodeInput.value = currentUser?.familyCode || "";
+        profileFamilyCodeInput.value = normalizeFamilyCode(
+            currentUser?.familyCode || ""
+        );
     }
     if (profileFamilyCodeDisplay) {
-        profileFamilyCodeDisplay.textContent = currentUser?.familyCode
-            ? `내 코드: ${currentUser.familyCode}`
+        const normalizedCode = normalizeFamilyCode(currentUser?.familyCode);
+        profileFamilyCodeDisplay.textContent = normalizedCode
+            ? `내 코드: ${normalizedCode}`
             : "코드 없음";
     }
 
@@ -153,8 +160,9 @@ async function updateProfile(formData) {
 
     const data = await res.json();
 
-    const updatedFamilyCode =
-        data.familyCode ?? profileFamilyCodeInput?.value?.trim() ?? "";
+    const updatedFamilyCode = normalizeFamilyCode(
+        data.familyCode ?? profileFamilyCodeInput?.value ?? ""
+    );
     const mergedProfile = { ...data, familyCode: updatedFamilyCode };
 
     if (typeof setCurrentUser === "function") {
@@ -170,8 +178,9 @@ async function updateProfile(formData) {
         profileFamilyCodeInput.value = currentUser?.familyCode || "";
     }
     if (profileFamilyCodeDisplay) {
-        profileFamilyCodeDisplay.textContent = currentUser?.familyCode
-            ? `내 코드: ${currentUser.familyCode}`
+        const normalizedCode = normalizeFamilyCode(currentUser?.familyCode);
+        profileFamilyCodeDisplay.textContent = normalizedCode
+            ? `내 코드: ${normalizedCode}`
             : "코드 없음";
     }
 
@@ -253,7 +262,7 @@ profileForm?.addEventListener("submit", async (e) => {
 
     // 🔹 가족 코드 입력값
     if (profileFamilyCodeInput) {
-        const rawCode = profileFamilyCodeInput.value.trim();
+        const rawCode = normalizeFamilyCode(profileFamilyCodeInput.value);
         formData.append("familyCode", rawCode);
     }
 

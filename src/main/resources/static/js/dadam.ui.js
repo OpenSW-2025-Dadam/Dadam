@@ -436,7 +436,7 @@ async function openDayEventsModal(dateKey) {
 
 /* 캘린더 날짜 클릭 핸들러 */
 document.addEventListener("click", (e) => {
-    const cell = e.target.closest(".calendar-cell");
+    const cell = e.target.closest("#calendar-grid .calendar-cell");
     if (!cell || !calendarGridEl || !cell.dataset.date) return;
     if (cell.classList.contains("calendar-cell-empty")) return;
 

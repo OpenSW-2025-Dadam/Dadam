@@ -21,6 +21,7 @@ let archiveCalendarState = {
     year: new Date().getFullYear(),
     month: new Date().getMonth(),
 };
+let archiveActiveDateKey = null;
 
 function archiveAuthHeaders(base = {}) {
     const token = getAuthToken ? getAuthToken() : localStorage.getItem("dadam_auth_token");
@@ -177,8 +178,19 @@ function renderArchiveAnswers(answers) {
     archiveAnswerListEl.innerHTML = html;
 }
 
+function setArchiveSelectedCell(dateKey) {
+    if (!archiveCalendarGridEl) return;
+    archiveCalendarGridEl.querySelectorAll(".calendar-cell").forEach((cell) => {
+        if (!cell.dataset.date) return;
+        cell.classList.toggle("is-selected", cell.dataset.date === dateKey);
+    });
+}
+
 async function loadArchiveForDate(dateKey) {
     if (!dateKey) return;
+
+    archiveActiveDateKey = dateKey;
+    setArchiveSelectedCell(dateKey);
 
     if (archiveSelectedDateEl) {
         archiveSelectedDateEl.textContent = archiveFormatKoreanDate(dateKey);
@@ -261,6 +273,10 @@ function renderArchiveCalendar(year, monthIndex) {
         cell.appendChild(dayNumberEl);
 
         archiveCalendarGridEl.appendChild(cell);
+    }
+
+    if (archiveActiveDateKey) {
+        setArchiveSelectedCell(archiveActiveDateKey);
     }
 }
 
