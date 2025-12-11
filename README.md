@@ -7,8 +7,8 @@
 # 다담 (Dadam)
 > **茶談** [명사] 차를 마시며 하는 이야기
 세대 간 소통을 위한 가족 대화 플랫폼
-### *A Web Platform for Family Communication and Generational Bonding*
 
+*A Web Platform for Family Communication and Generational Bonding*
 
 ---
 
