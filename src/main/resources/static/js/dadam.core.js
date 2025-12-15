@@ -274,6 +274,7 @@ function applyCurrentUserToHeader() {
         userName: name,
         avatarUrl,
         size: "sm",
+        variant: "soft",
     });
 
     avatarWrapper.innerHTML = html;

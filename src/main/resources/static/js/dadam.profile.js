@@ -52,6 +52,7 @@ function updateAvatarVisuals() {
 
     // 1) 헤더 아바타
     if (headerAvatar) {
+        headerAvatar.classList.add("avatar-soft");
         const { name, avatarUrl } = getCurrentUserAvatarInfo("내 프로필");
 
         const label =
@@ -76,6 +77,7 @@ function updateAvatarVisuals() {
 
     // 2) 프로필 모달 아바타
     if (profileAvatarPreview) {
+        profileAvatarPreview.classList.add("avatar-soft");
         const { name, avatarUrl } = getCurrentUserAvatarInfo("나");
 
         const label =

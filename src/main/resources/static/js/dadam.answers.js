@@ -317,7 +317,7 @@ function renderAnswerListFromData(answers) {
 
             return `
         <li class="answer-item" data-answer-id="${a.id}">
-          <button class="answer-main" type="button" aria-label="${escapeHtml(displayName)}님의 답변 보기">
+          <div class="answer-main" aria-label="${escapeHtml(displayName)}님의 답변">
             <div class="answer-user">
               <span class="avatar avatar-sm avatar-soft">
                 <span class="avatar-initial">${avatarLabel}</span>
@@ -332,7 +332,7 @@ function renderAnswerListFromData(answers) {
               <span class="answer-preview-text">${escapeHtml(preview)}</span>
               <span class="answer-quote">”</span>
             </p>
-          </button>
+          </div>
           <div class="answer-meta">
             <button class="meta-btn like-btn" type="button" aria-label="좋아요">
               <span class="fh-icon-heart"></span>
@@ -1107,10 +1107,6 @@ document.addEventListener("click", (e) => {
         return;
     }
 
-    const mainBtn = e.target.closest(".answer-main");
-    if (mainBtn) {
-        openAnswerThread(answerId);
-    }
 });
 
 /* ✅ 모달 내 답변 수정 / 취소 / 삭제 버튼 */
