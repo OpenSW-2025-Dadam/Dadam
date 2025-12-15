@@ -288,20 +288,7 @@ function renderCalendar(year, monthIndex) {
             badge.textContent = todaysEvents.length > 99
                 ? "99+"
                 : todaysEvents.length;
-            cell.appendChild(badge);
-
-            todaysEvents.slice(0, 3).forEach((ev) => {
-                const dot = document.createElement("div");
-                dot.className = "calendar-event-dot";
-                const typeClass =
-                    ev.type === "trip"
-                        ? "calendar-event-trip"
-                        : ev.type === "event"
-                            ? "calendar-event-event"
-                            : "calendar-event-dinner";
-                dot.classList.add(typeClass);
-                dotWrapper.appendChild(dot);
-            });
+            dotWrapper.appendChild(badge);
         }
 
         cell.appendChild(dayNumberEl);
