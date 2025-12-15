@@ -1,8 +1,7 @@
 /* =====================================================
    dadam.core.js
    - 유저 정보 / 공통 상수
-   - 로컬스토리지 관리
-   - 인증 토큰 관리
+   - 인증 토큰 관리 (메모리 기반)
    - 알림(Notification) 시스템
    - 모달 시스템 (열기/닫기 + ESC)
 ===================================================== */
@@ -66,7 +65,7 @@ async function authPost(path, payload) {
 }
 
 /* -----------------------------------------------------
-   📌 공통 상수 & 로컬 저장 키
+   📌 공통 상수 & 메모리 저장 키
 ----------------------------------------------------- */
 
 const DADAM_KEYS = {
@@ -76,9 +75,12 @@ const DADAM_KEYS = {
     COMMENTS: "dadam_comments",
     BALANCE_GAME: "dadam_balance_game",
     QUIZ_STATE: "dadam_quiz_state",
-    AUTH_TOKEN: "dadam_auth_token", // 🔐 로그인 토큰 저장용
+    AUTH_TOKEN: "dadam_auth_token",
     EVENTS: "dadam_events",
 };
+
+// ⚡️ 로컬스토리지 대신 사용하는 메모리 저장소
+const memoryStore = {};
 
 const INTRO_MODAL_ID = "modal-intro";
 
@@ -98,11 +100,10 @@ function clearUserScopedStorage() {
         DADAM_KEYS.BALANCE_GAME,
         DADAM_KEYS.QUIZ_STATE,
         DADAM_KEYS.EVENTS,
-        // 필요하면 추가
     ];
 
     userScopedKeys.forEach((key) => {
-        localStorage.removeItem(key);
+        delete memoryStore[key];
     });
 }
 
@@ -206,29 +207,17 @@ function buildAvatarHtml({
    👤 기본 유저 정보 (처음 접속 시 자동 생성)
 ----------------------------------------------------- */
 
-function loadUserProfile() {
-    const raw = localStorage.getItem(DADAM_KEYS.USER_PROFILE);
-    if (raw) {
-        try {
-            return JSON.parse(raw);
-        } catch (_) {}
-    }
+const defaultProfile = {
+    id: null,
+    name: "",
+    avatarUrl: null,
+    role: null,
+    familyRole: null,
+    familyCode: "",
+    email: "",
+};
 
-    const defaultProfile = {
-        id: null,
-        name: "우리 가족",
-        avatarUrl: null,
-        role: null,
-        familyRole: null,
-        familyCode: "",
-        email: "",
-    };
-
-    localStorage.setItem(DADAM_KEYS.USER_PROFILE, JSON.stringify(defaultProfile));
-    return defaultProfile;
-}
-
-let currentUser = loadUserProfile();
+let currentUser = { ...defaultProfile };
 
 function setCurrentUser(profile = {}) {
     const resolvedName = (() => {
@@ -242,7 +231,7 @@ function setCurrentUser(profile = {}) {
             return existing;
         }
 
-        return "우리 가족";
+        return "";
     })();
 
     currentUser = {
@@ -260,7 +249,6 @@ function setCurrentUser(profile = {}) {
         email: profile.email ?? currentUser.email ?? "",
     };
 
-    localStorage.setItem(DADAM_KEYS.USER_PROFILE, JSON.stringify(currentUser));
     applyCurrentUserToHeader();
 }
 
@@ -270,7 +258,7 @@ function applyCurrentUserToHeader() {
 
     if (!avatarWrapper) return;
 
-    const name = currentUser?.name || "우리 가족";
+    const name = currentUser?.name || "내 프로필";
     const avatarUrl =
         currentUser?.avatarUrl || currentUser?.profileImageUrl || null;
 
@@ -297,28 +285,28 @@ document.addEventListener("DOMContentLoaded", () => {
 ----------------------------------------------------- */
 
 function save(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
+    memoryStore[key] = value;
 }
 
 function load(key, fallback = null) {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    if (Object.prototype.hasOwnProperty.call(memoryStore, key)) {
+        return memoryStore[key];
+    }
+    return fallback;
 }
 
 /* -----------------------------------------------------
    🔐 인증 토큰 헬퍼
 ----------------------------------------------------- */
 
+let authToken = null;
+
 function getAuthToken() {
-    return localStorage.getItem(DADAM_KEYS.AUTH_TOKEN) || null;
+    return authToken;
 }
 
 function setAuthToken(token) {
-    if (token) {
-        localStorage.setItem(DADAM_KEYS.AUTH_TOKEN, token);
-    } else {
-        localStorage.removeItem(DADAM_KEYS.AUTH_TOKEN);
-    }
+    authToken = token || null;
 }
 
 function isLoggedIn() {
@@ -526,8 +514,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const logoutBtn = document.getElementById("logout-btn");
     logoutBtn?.addEventListener("click", () => {
         setAuthToken(null);
-        clearUserScopedStorage();              // 🔥 계정 데이터 싹 지우기
-        setCurrentUser(loadUserProfile());
+        clearUserScopedStorage();
+        currentUser = { ...defaultProfile };
+        applyCurrentUserToHeader();
         closeModal("modal-profile");
         setAuthUiState(false);
         addNotification({
@@ -539,5 +528,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (typeof window.resetQuizForCurrentUser === "function") {
             window.resetQuizForCurrentUser();
         }
+
+        if (typeof window.clearAnswerSession === "function") {
+            window.clearAnswerSession();
+        }
+
+        window.DADAM_FAMILY = {};
+        window.DADAM_FAMILY_COUNT = 0;
     });
 });

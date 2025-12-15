@@ -20,7 +20,7 @@ function normalizeFamilyCode(value) {
    🔹 공통 API GET (Bearer 토큰 포함)
 ----------------------------------------------------- */
 async function familyApiGet(url) {
-    const token = localStorage.getItem("dadam_auth_token");
+    const token = typeof getAuthToken === "function" ? getAuthToken() : null;
 
     const res = await fetch(url, {
         method: "GET",
@@ -35,6 +35,9 @@ async function familyApiGet(url) {
             type: "error",
             message: "로그인이 필요합니다.",
         });
+        if (typeof setAuthUiState === "function") {
+            setAuthUiState(false);
+        }
         throw new Error("401 Unauthorized");
     }
 
@@ -47,7 +50,7 @@ async function familyApiGet(url) {
 }
 
 async function familyApiPost(url) {
-    const token = localStorage.getItem("dadam_auth_token");
+    const token = typeof getAuthToken === "function" ? getAuthToken() : null;
 
     const res = await fetch(url, {
         method: "POST",
@@ -62,6 +65,9 @@ async function familyApiPost(url) {
             type: "error",
             message: "로그인이 필요합니다.",
         });
+        if (typeof setAuthUiState === "function") {
+            setAuthUiState(false);
+        }
         throw new Error("401 Unauthorized");
     }
 
@@ -347,6 +353,17 @@ function renderInviteFamilyMembers(members) {
 }
 
 async function openFamilyInviteModal() {
+    const token = typeof getAuthToken === "function" ? getAuthToken() : null;
+    if (!token) {
+        addNotification?.({
+            type: "warning",
+            message: "로그인 후 초대 코드를 확인할 수 있어요.",
+        });
+        if (typeof setAuthUiState === "function") {
+            setAuthUiState(false);
+        }
+        return;
+    }
     try {
         const [codeResp, familyRaw] = await Promise.all([
             familyApiPost("/api/v1/users/me/family-code"),

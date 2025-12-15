@@ -45,8 +45,9 @@ let latestAnswerProgressList = [];
 /* 댓글 글자 수 제한 (백엔드 Comment.MAX_COMMENT_LENGTH = 50) */
 const COMMENT_MAX_LENGTH = 50;
 
-/* 질문 만족도 로컬스토리지 키 */
+/* 질문 만족도 메모리 캐시 */
 const QUESTION_RATING_KEY = "dadam_question_rating";
+let questionRatingMap = {};
 
 /* -----------------------------------------------------
    🧩 헬퍼 함수
@@ -130,7 +131,7 @@ function isMyComment(comment) {
 ----------------------------------------------------- */
 
 async function apiGet(url) {
-    const token = localStorage.getItem("dadam_auth_token");
+    const token = typeof getAuthToken === "function" ? getAuthToken() : null;
 
     const res = await fetch(url, {
         method: "GET",
@@ -156,7 +157,7 @@ async function apiGet(url) {
 }
 
 async function apiPost(url, body) {
-    const token = localStorage.getItem("dadam_auth_token");
+    const token = typeof getAuthToken === "function" ? getAuthToken() : null;
 
     const res = await fetch(url, {
         method: "POST",
@@ -188,7 +189,7 @@ async function apiPost(url, body) {
 
 /* ✅ PATCH (답변 수정에 사용) */
 async function apiPatch(url, body) {
-    const token = localStorage.getItem("dadam_auth_token");
+    const token = typeof getAuthToken === "function" ? getAuthToken() : null;
 
     const res = await fetch(url, {
         method: "PATCH",
@@ -220,7 +221,7 @@ async function apiPatch(url, body) {
 
 /* ✅ PUT (댓글 수정에 사용) */
 async function apiPut(url, body) {
-    const token = localStorage.getItem("dadam_auth_token");
+    const token = typeof getAuthToken === "function" ? getAuthToken() : null;
 
     const res = await fetch(url, {
         method: "PUT",
@@ -252,7 +253,7 @@ async function apiPut(url, body) {
 
 /* ✅ DELETE (답변/댓글 삭제) */
 async function apiDelete(url) {
-    const token = localStorage.getItem("dadam_auth_token");
+    const token = typeof getAuthToken === "function" ? getAuthToken() : null;
 
     const res = await fetch(url, {
         method: "DELETE",
@@ -995,25 +996,14 @@ function toggleLikeForAnswer(answerId) {
    ⭐ 질문 만족도 조사 (프론트 전용, 로컬 저장)
 ----------------------------------------------------- */
 
-/* 로컬스토리지에서 질문별 만족도 데이터 로드 */
+/* 메모리에서 질문별 만족도 데이터 로드 */
 function loadQuestionRatingMap() {
-    const raw = localStorage.getItem(QUESTION_RATING_KEY);
-    if (!raw) return {};
-    try {
-        const parsed = JSON.parse(raw);
-        return parsed && typeof parsed === "object" ? parsed : {};
-    } catch (_) {
-        return {};
-    }
+    return { ...questionRatingMap };
 }
 
-/* 로컬스토리지에 질문별 만족도 데이터 저장 */
+/* 메모리에 질문별 만족도 데이터 저장 */
 function saveQuestionRatingMap(map) {
-    try {
-        localStorage.setItem(QUESTION_RATING_KEY, JSON.stringify(map));
-    } catch (_) {
-        // 용량 초과 등은 조용히 무시
-    }
+    questionRatingMap = { ...map };
 }
 
 /* 현재 질문에 대해 저장된 만족도 값을 UI에 반영 */
@@ -1067,6 +1057,12 @@ function initQuestionRating() {
         });
     });
 }
+
+window.clearAnswerSession = function () {
+    questionRatingMap = {};
+    todaysAnswersCache = [];
+    latestAnswerProgressList = [];
+};
 
 /* -----------------------------------------------------
    🎯 이벤트 리스너 등록

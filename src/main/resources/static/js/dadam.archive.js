@@ -34,7 +34,7 @@ function deriveDateForMonth(year, monthIndex) {
 }
 
 function archiveAuthHeaders(base = {}) {
-    const token = getAuthToken ? getAuthToken() : localStorage.getItem("dadam_auth_token");
+    const token = typeof getAuthToken === "function" ? getAuthToken() : null;
     return {
         ...base,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -241,9 +241,15 @@ async function loadArchiveForDate(dateKey) {
     } catch (err) {
         console.error("[ARCHIVE] load error", err);
         if (archiveQuestionTextEl) {
-            archiveQuestionTextEl.textContent = "질문을 불러오지 못했어요.";
+            const message = err?.message?.includes("401")
+                ? "로그인 후 지난 질문을 볼 수 있어요."
+                : "질문을 불러오지 못했어요.";
+            archiveQuestionTextEl.textContent = message;
         }
         renderArchiveAnswers([]);
+        if (err?.message?.includes("401") && typeof setAuthUiState === "function") {
+            setAuthUiState(false);
+        }
     }
 }
 
