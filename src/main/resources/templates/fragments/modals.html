@@ -159,24 +159,25 @@
                 </button>
             </header>
             <div class="modal-body">
-                <div class="profile-avatar-section" id="family-profile-avatar">
-                    <!-- JS 렌더링 -->
+                <div class="family-profile-hero">
+                    <div class="profile-avatar-section" id="family-profile-avatar">
+                        <!-- JS 렌더링 -->
+                    </div>
+                    <div class="family-profile-hero-text">
+                        <p class="family-profile-name" id="family-profile-name"></p>
+                        <span class="family-profile-role-chip" id="family-profile-role"></span>
+                    </div>
                 </div>
-                <div class="field-group">
-                    <label class="field-label">이름</label>
-                    <p class="field-value" id="family-profile-name"></p>
-                </div>
-                <div class="field-group">
-                    <label class="field-label">역할</label>
-                    <p class="field-value" id="family-profile-role"></p>
-                </div>
-                <div class="field-group">
-                    <label class="field-label">이메일</label>
-                    <p class="field-value" id="family-profile-email"></p>
-                </div>
-                <div class="field-group">
-                    <label class="field-label">가족 코드</label>
-                    <p class="field-value" id="family-profile-code"></p>
+
+                <div class="profile-info-grid">
+                    <div class="info-card">
+                        <p class="info-label">이메일</p>
+                        <p class="info-value" id="family-profile-email"></p>
+                    </div>
+                    <div class="info-card">
+                        <p class="info-label">가족 코드</p>
+                        <p class="info-value" id="family-profile-code"></p>
+                    </div>
                 </div>
             </div>
         </div>
