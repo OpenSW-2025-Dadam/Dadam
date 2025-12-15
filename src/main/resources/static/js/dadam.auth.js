@@ -31,6 +31,9 @@ const signupCancelBtn = document.getElementById("signup-cancel-btn");
 const goSignupLink = document.getElementById("go-signup-link");
 const goLoginLink = document.getElementById("go-login-link");
 
+const loginFeedbackEl = document.getElementById("login-feedback");
+const signupFeedbackEl = document.getElementById("signup-feedback");
+
 // 현재 모드 상태 (login | signup)
 let authMode = "login";
 
@@ -61,6 +64,66 @@ function setAuthMode(mode) {
     });
 }
 
+function clearAuthFeedback(target) {
+    const el = target === "signup" ? signupFeedbackEl : loginFeedbackEl;
+    if (!el) return;
+    el.textContent = "";
+    el.hidden = true;
+    el.classList.remove("is-error");
+}
+
+function showAuthFeedback(target, message, tone = "info") {
+    const el = target === "signup" ? signupFeedbackEl : loginFeedbackEl;
+    if (!el || !message) return;
+    el.textContent = message;
+    el.hidden = false;
+    if (tone === "error") {
+        el.classList.add("is-error");
+    } else {
+        el.classList.remove("is-error");
+    }
+}
+
+function openSignupModal(prefillEmail, message) {
+    setAuthMode("signup");
+    clearAuthFeedback("login");
+    if (typeof closeModal === "function") {
+        closeModal("modal-login");
+    }
+    if (typeof openModal === "function") {
+        openModal("modal-signup");
+    }
+    if (prefillEmail && signupEmailInput) {
+        signupEmailInput.value = prefillEmail;
+    }
+    if (message) {
+        showAuthFeedback("signup", message);
+    } else {
+        clearAuthFeedback("signup");
+    }
+    signupNameInput?.focus();
+}
+
+function openLoginModal(prefillEmail, message) {
+    setAuthMode("login");
+    clearAuthFeedback("signup");
+    if (typeof closeModal === "function") {
+        closeModal("modal-signup");
+    }
+    if (typeof openModal === "function") {
+        openModal("modal-login");
+    }
+    if (prefillEmail && loginEmailInput) {
+        loginEmailInput.value = prefillEmail;
+    }
+    if (message) {
+        showAuthFeedback("login", message);
+    } else {
+        clearAuthFeedback("login");
+    }
+    loginEmailInput?.focus();
+}
+
 // 탭 버튼 클릭 이벤트
 authTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -72,27 +135,26 @@ authTabs.forEach((tab) => {
 
 // "회원가입" 링크 → 회원가입 패널로
 goSignupLink?.addEventListener("click", () => {
-    setAuthMode("signup");
+    openSignupModal(loginEmailInput?.value);
 });
 
 // "로그인" 링크 → 로그인 패널로
 goLoginLink?.addEventListener("click", () => {
-    setAuthMode("login");
+    openLoginModal(signupEmailInput?.value);
 });
 
 introLoginBtn?.addEventListener("click", () => {
     if (typeof closeModal === "function") {
         closeModal("modal-intro");
     }
-    openModal("modal-login");
+    openLoginModal();
 });
 
 introSignupBtn?.addEventListener("click", () => {
     if (typeof closeModal === "function") {
         closeModal("modal-intro");
     }
-    setAuthMode("signup");
-    openModal("modal-signup");
+    openSignupModal();
 });
 
 loginCancelBtn?.addEventListener("click", (e) => {
@@ -114,6 +176,8 @@ signupCancelBtn?.addEventListener("click", (e) => {
 ----------------------------------------------------- */
 function handleAuthSuccess(data, message) {
     try {
+        clearAuthFeedback("login");
+        clearAuthFeedback("signup");
         // data 예시: { token: "...", user: { ... } }
 
         // 1) 토큰 저장 → 항상 localStorage에도 저장
@@ -177,8 +241,10 @@ loginForm?.addEventListener("submit", async (e) => {
     const email = loginEmailInput?.value.trim();
     const password = loginPasswordInput?.value.trim();
 
+    clearAuthFeedback("login");
+
     if (!email || !password) {
-        alert("이메일과 비밀번호를 입력해 주세요.");
+        showAuthFeedback("login", "이메일과 비밀번호를 모두 입력해 주세요.", "error");
         return;
     }
 
@@ -192,23 +258,37 @@ loginForm?.addEventListener("submit", async (e) => {
         });
 
         if (!res.ok) {
-                    const text = await res.text().catch(() => "");
-                    console.error("[AUTH] login failed:", res.status, text);
+            const text = await res.text().catch(() => "");
+            console.error("[AUTH] login failed:", res.status, text);
 
-                    // 💡 401 뿐만 아니라 400일 때도 자격 증명 오류 메시지를 출력하도록 수정
-                    if (res.status === 401 || res.status === 400) {
-                        alert("이메일 또는 비밀번호가 올바르지 않습니다.");
-                    } else {
-                        alert("로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
-                    }
-                    return;
-                }
+            if (res.status === 404) {
+                const message = "아직 가입되지 않은 이메일입니다. 30초 만에 회원가입을 완료해 보세요.";
+                openSignupModal(email, message);
+                return;
+            }
+
+            // 💡 401 뿐만 아니라 400일 때도 자격 증명 오류 메시지를 출력하도록 수정
+            if (res.status === 401 || res.status === 400) {
+                showAuthFeedback("login", "이메일 또는 비밀번호가 올바르지 않습니다.", "error");
+            } else {
+                showAuthFeedback(
+                    "login",
+                    "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+                    "error"
+                );
+            }
+            return;
+        }
 
         const data = await res.json();
         handleAuthSuccess(data, "로그인에 성공했어요.");
     } catch (err) {
         console.error("[AUTH] login exception:", err);
-        alert("로그인 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+        showAuthFeedback(
+            "login",
+            "로그인 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+            "error"
+        );
     }
 });
 
@@ -224,8 +304,10 @@ signupForm?.addEventListener("submit", async (e) => {
     const password = signupPasswordInput?.value.trim();
     const familyCode = document.getElementById("signup-family-code")?.value.trim();
 
+    clearAuthFeedback("signup");
+
     if (!name || !email || !password) {
-        alert("이름, 이메일, 비밀번호를 모두 입력해 주세요.");
+        showAuthFeedback("signup", "이름, 이메일, 비밀번호를 모두 입력해 주세요.", "error");
         return;
     }
 
@@ -257,13 +339,19 @@ signupForm?.addEventListener("submit", async (e) => {
             })();
 
             if (res.status === 409 || messageFromServer.includes("이미")) {
-                alert("이미 가입된 이메일입니다.");
+                showAuthFeedback("signup", "이미 가입된 이메일입니다.", "error");
             } else if (res.status >= 500) {
-                alert("서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+                showAuthFeedback(
+                    "signup",
+                    "서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+                    "error"
+                );
             } else {
-                alert(
+                showAuthFeedback(
+                    "signup",
                     messageFromServer ||
-                    "회원가입 중 오류가 발생했습니다. 입력 정보를 다시 확인해 주세요."
+                        "회원가입 중 오류가 발생했습니다. 입력 정보를 다시 확인해 주세요.",
+                    "error"
                 );
             }
             return;
@@ -278,7 +366,11 @@ signupForm?.addEventListener("submit", async (e) => {
         );
     } catch (err) {
         console.error("[AUTH] signup exception:", err);
-        alert("회원가입 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+        showAuthFeedback(
+            "signup",
+            "회원가입 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+            "error"
+        );
     }
 });
 

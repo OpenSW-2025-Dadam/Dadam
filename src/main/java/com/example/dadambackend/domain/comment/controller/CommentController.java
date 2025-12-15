@@ -3,6 +3,7 @@ package com.example.dadambackend.domain.comment.controller;
 import com.example.dadambackend.domain.comment.dto.request.CommentRequest;
 import com.example.dadambackend.domain.comment.dto.response.CommentResponse;
 import com.example.dadambackend.domain.comment.service.CommentService;
+import com.example.dadambackend.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import java.util.List;
 public class CommentController {
 
     private final CommentService commentService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     /**
      * GET /api/v1/answers/{answerId}/comments
@@ -34,9 +36,12 @@ public class CommentController {
     @PostMapping
     public ResponseEntity<Void> createComment(
             @PathVariable Long answerId,
-            @RequestBody CommentRequest request) {
+            @RequestBody CommentRequest request,
+            @RequestHeader("Authorization") String authHeader) {
 
-        commentService.createComment(answerId, request);
+        Long userId = extractUserId(authHeader);
+
+        commentService.createComment(answerId, userId, request);
 
         // 201 Created 응답
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -50,9 +55,12 @@ public class CommentController {
     public ResponseEntity<Void> updateComment(
             @PathVariable Long answerId,
             @PathVariable Long commentId,
-            @RequestBody CommentRequest request) {
+            @RequestBody CommentRequest request,
+            @RequestHeader("Authorization") String authHeader) {
 
-        commentService.updateComment(answerId, commentId, request);
+        Long userId = extractUserId(authHeader);
+
+        commentService.updateComment(answerId, commentId, userId, request);
         // 204 No Content
         return ResponseEntity.noContent().build();
     }
@@ -64,10 +72,21 @@ public class CommentController {
     @DeleteMapping("/{commentId}")
     public ResponseEntity<Void> deleteComment(
             @PathVariable Long answerId,
-            @PathVariable Long commentId) {
+            @PathVariable Long commentId,
+            @RequestHeader("Authorization") String authHeader) {
 
-        commentService.deleteComment(answerId, commentId);
+        Long userId = extractUserId(authHeader);
+
+        commentService.deleteComment(answerId, commentId, userId);
         // 204 No Content
         return ResponseEntity.noContent().build();
+    }
+
+    private Long extractUserId(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new IllegalArgumentException("잘못된 Authorization 헤더 형식입니다.");
+        }
+        String token = authHeader.replace("Bearer ", "");
+        return jwtTokenProvider.getUserIdFromToken(token);
     }
 }

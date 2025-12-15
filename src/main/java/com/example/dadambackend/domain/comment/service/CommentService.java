@@ -28,9 +28,6 @@ public class CommentService {
     private final AnswerRepository answerRepository; // 답변 엔티티 조회를 위해 필요
     private final UserRepository userRepository;
 
-    // TODO: 실제 서비스에서는 SecurityContext에서 현재 로그인 유저 ID를 가져와야 함
-    private final Long TEMP_USER_ID = 1L; // 현재 사용자 ID (임시)
-
     /**
      * 특정 답변에 달린 모든 댓글 조회
      */
@@ -51,10 +48,10 @@ public class CommentService {
      * 댓글 작성 로직
      */
     @Transactional
-    public void createComment(Long answerId, CommentRequest request) {
+    public void createComment(Long answerId, Long userId, CommentRequest request) {
 
         // 1. 1인당 댓글 개수 제한 검사
-        long userCommentCount = commentRepository.countByUserId(TEMP_USER_ID);
+        long userCommentCount = commentRepository.countByUserId(userId);
         if (userCommentCount >= MAX_COMMENTS_PER_USER) {
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
@@ -66,7 +63,7 @@ public class CommentService {
         Answer answer = answerRepository.findById(answerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_FOUND, "해당 답변을 찾을 수 없습니다."));
 
-        User user = userRepository.findById(TEMP_USER_ID)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)); // User 엔티티는 재사용
 
         // 3. 댓글 생성 및 저장
@@ -80,7 +77,7 @@ public class CommentService {
      * 댓글 수정 로직
      */
     @Transactional
-    public void updateComment(Long answerId, Long commentId, CommentRequest request) {
+    public void updateComment(Long answerId, Long commentId, Long userId, CommentRequest request) {
         // 1. 댓글 조회
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException(
@@ -97,7 +94,7 @@ public class CommentService {
         }
 
         // 3. 작성자 검증 (본인 댓글만 수정 가능)
-        if (!comment.getUser().getId().equals(TEMP_USER_ID)) {
+        if (!comment.getUser().getId().equals(userId)) {
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
                     "본인이 작성한 댓글만 수정할 수 있습니다."
@@ -113,7 +110,7 @@ public class CommentService {
      * 댓글 삭제 로직
      */
     @Transactional
-    public void deleteComment(Long answerId, Long commentId) {
+    public void deleteComment(Long answerId, Long commentId, Long userId) {
         // 1. 댓글 조회
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException(
@@ -130,7 +127,7 @@ public class CommentService {
         }
 
         // 3. 작성자 검증 (본인 댓글만 삭제 가능)
-        if (!comment.getUser().getId().equals(TEMP_USER_ID)) {
+        if (!comment.getUser().getId().equals(userId)) {
             throw new BusinessException(
                     ErrorCode.INVALID_REQUEST,
                     "본인이 작성한 댓글만 삭제할 수 있습니다."

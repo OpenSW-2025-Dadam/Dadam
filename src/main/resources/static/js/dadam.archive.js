@@ -23,6 +23,16 @@ let archiveCalendarState = {
 };
 let archiveActiveDateKey = null;
 
+function deriveDateForMonth(year, monthIndex) {
+    if (archiveActiveDateKey) {
+        const [y, m] = archiveActiveDateKey.split("-").map(Number);
+        if (y === year && m === monthIndex + 1) {
+            return archiveActiveDateKey;
+        }
+    }
+    return archiveFormatDateKey(new Date(year, monthIndex, 1));
+}
+
 function archiveAuthHeaders(base = {}) {
     const token = getAuthToken ? getAuthToken() : localStorage.getItem("dadam_auth_token");
     return {
@@ -304,6 +314,7 @@ archiveCalendarPrevBtn?.addEventListener("click", () => {
     }
     archiveCalendarState = { year, month };
     renderArchiveCalendar(year, month);
+    loadArchiveForDate(deriveDateForMonth(year, month));
 });
 
 archiveCalendarNextBtn?.addEventListener("click", () => {
@@ -315,6 +326,7 @@ archiveCalendarNextBtn?.addEventListener("click", () => {
     }
     archiveCalendarState = { year, month };
     renderArchiveCalendar(year, month);
+    loadArchiveForDate(deriveDateForMonth(year, month));
 });
 
 document.addEventListener("click", (e) => {
